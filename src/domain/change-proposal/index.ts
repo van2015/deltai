@@ -1,6 +1,22 @@
 import type { ProjectState } from '../project/project-state/index.js';
 
-export type ProposalStatus = 'Generated';
+export enum ProposalStatus {
+  Generated = 'Generated',
+  UnderReview = 'UnderReview',
+  Accepted = 'Accepted',
+  Rejected = 'Rejected',
+  Applying = 'Applying',
+  Applied = 'Applied',
+  ApplicationFailed = 'ApplicationFailed',
+  Superseded = 'Superseded',
+}
+
+export class InvalidProposalTransitionError extends Error {
+  constructor(from: ProposalStatus, to: ProposalStatus) {
+    super(`Cannot transition proposal from ${from} to ${to}`);
+    this.name = 'InvalidProposalTransitionError';
+  }
+}
 
 export class ChangeProposal {
   private constructor(
@@ -10,7 +26,7 @@ export class ChangeProposal {
   ) {}
 
   static create(sourceState: ProjectState, targetState: ProjectState): ChangeProposal {
-    return new ChangeProposal(sourceState, targetState, 'Generated');
+    return new ChangeProposal(sourceState, targetState, ProposalStatus.Generated);
   }
 
   get sourceState(): ProjectState {
@@ -23,5 +39,45 @@ export class ChangeProposal {
 
   get status(): ProposalStatus {
     return this.proposalStatus;
+  }
+
+  review(): void {
+    this.transitionTo(ProposalStatus.UnderReview, ProposalStatus.Generated);
+  }
+
+  accept(): void {
+    this.transitionTo(ProposalStatus.Accepted, ProposalStatus.UnderReview);
+  }
+
+  reject(): void {
+    this.transitionTo(ProposalStatus.Rejected, ProposalStatus.UnderReview);
+  }
+
+  supersede(): void {
+    this.transitionTo(ProposalStatus.Superseded, ProposalStatus.UnderReview);
+  }
+
+  apply(): void {
+    this.transitionTo(ProposalStatus.Applying, ProposalStatus.Accepted);
+  }
+
+  succeed(): void {
+    this.transitionTo(ProposalStatus.Applied, ProposalStatus.Applying);
+  }
+
+  fail(): void {
+    this.transitionTo(ProposalStatus.ApplicationFailed, ProposalStatus.Applying);
+  }
+
+  retry(): void {
+    this.transitionTo(ProposalStatus.Applying, ProposalStatus.ApplicationFailed);
+  }
+
+  private transitionTo(next: ProposalStatus, allowedFrom: ProposalStatus): void {
+    if (this.proposalStatus !== allowedFrom) {
+      throw new InvalidProposalTransitionError(this.proposalStatus, next);
+    }
+
+    this.proposalStatus = next;
   }
 }
