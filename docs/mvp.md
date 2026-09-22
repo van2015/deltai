@@ -1,0 +1,12 @@
+1. OpenProject
+2. AnalyzeProject
+3. CreateChangeIntent
+4. InspectProject
+5. ProposeChangeSet
+6. ApplyChangeSet
+7. RunTests
+8. ViewChangeSet
+9. ViewUML
+10. EditUML
+11. ExtractViewChanges
+12. ReviseChangeSet
