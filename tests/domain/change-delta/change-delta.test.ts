@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { ChangeDelta, ChangeType } from '@/domain/change-delta/index.js';
-import type { Element, Relationship } from '@/domain/project/project-state/index.js';
+import { ChangeDelta } from '@/domain/change-delta/change-delta.js';
+import { ChangeType } from '@/domain/change-delta/change-type.js';
+import type { Element } from '@/domain/project/project-state/element.js';
+import type { Relationship } from '@/domain/project/project-state/relationship.js';
 
 import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
 

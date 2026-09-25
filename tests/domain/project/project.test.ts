@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { ChangeProposal } from '@/domain/change-proposal/index.js';
-import {
-  Project,
-  ProposalNotAcceptedError,
-  SourceStateMismatchError,
-} from '@/domain/project/index.js';
+import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
+import { Project } from '@/domain/project/project.js';
+import { ProposalNotAcceptedError } from '@/domain/project/proposal-not-accepted-error.js';
+import { SourceStateMismatchError } from '@/domain/project/source-state-mismatch-error.js';
 
 import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
 

@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  ChangeProposal,
-  InvalidProposalTransitionError,
-  MismatchedProjectError,
-  ProposalStatus,
-} from '@/domain/change-proposal/index.js';
+import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
+import { InvalidProposalTransitionError } from '@/domain/change-proposal/invalid-proposal-transition-error.js';
+import { MismatchedProjectError } from '@/domain/change-proposal/mismatched-project-error.js';
+import { ProposalStatus } from '@/domain/change-proposal/proposal-status.js';
 
 import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
 

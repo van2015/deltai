@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Element, ProjectModel } from '@/domain/project/project-state/index.js';
+import type { Element } from '@/domain/project/project-state/element.js';
+import type { ProjectModel } from '@/domain/project/project-state/project-model.js';
 
 import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
 

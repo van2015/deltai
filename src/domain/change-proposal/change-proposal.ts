@@ -1,32 +1,7 @@
-import type { ProjectState } from '../project/project-state/index.js';
-
-export enum ProposalStatus {
-  Generated = 'Generated',
-  UnderReview = 'UnderReview',
-  Accepted = 'Accepted',
-  Rejected = 'Rejected',
-  Applying = 'Applying',
-  Applied = 'Applied',
-  ApplicationFailed = 'ApplicationFailed',
-  Superseded = 'Superseded',
-}
-
-export class InvalidProposalTransitionError extends Error {
-  constructor(from: ProposalStatus, to: ProposalStatus) {
-    super(`Cannot transition proposal from ${from} to ${to}`);
-    this.name = 'InvalidProposalTransitionError';
-  }
-}
-
-export class MismatchedProjectError extends Error {
-  constructor(sourceProjectId: string, targetProjectId: string) {
-    super(
-      `Proposal source and target states belong to different projects ` +
-        `(${sourceProjectId} != ${targetProjectId})`,
-    );
-    this.name = 'MismatchedProjectError';
-  }
-}
+import type { ProjectState } from '../project/project-state/project-state.js';
+import { InvalidProposalTransitionError } from './invalid-proposal-transition-error.js';
+import { MismatchedProjectError } from './mismatched-project-error.js';
+import { ProposalStatus } from './proposal-status.js';
 
 export class ChangeProposal {
   private constructor(

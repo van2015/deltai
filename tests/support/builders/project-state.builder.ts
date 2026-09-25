@@ -1,10 +1,8 @@
-import { ProjectState } from '@/domain/project/project-state/index.js';
-import type {
-  Element,
-  ProjectId,
-  ProjectModel,
-  Relationship,
-} from '@/domain/project/project-state/index.js';
+import { ProjectState } from '@/domain/project/project-state/project-state.js';
+import type { Element } from '@/domain/project/project-state/element.js';
+import type { ProjectId } from '@/domain/project/project-state/project-id.js';
+import type { ProjectModel } from '@/domain/project/project-state/project-model.js';
+import type { Relationship } from '@/domain/project/project-state/relationship.js';
 
 const DEFAULT_PROJECT_ID = 'project-1';
 

@@ -1,19 +1,8 @@
-import { ProposalStatus, type ChangeProposal } from '../change-proposal/index.js';
-import type { ProjectState } from './project-state/index.js';
-
-export class SourceStateMismatchError extends Error {
-  constructor() {
-    super('Proposal source state does not match the current project state');
-    this.name = 'SourceStateMismatchError';
-  }
-}
-
-export class ProposalNotAcceptedError extends Error {
-  constructor(status: ProposalStatus) {
-    super(`Cannot apply a proposal in ${status} state`);
-    this.name = 'ProposalNotAcceptedError';
-  }
-}
+import type { ChangeProposal } from '../change-proposal/change-proposal.js';
+import { ProposalStatus } from '../change-proposal/proposal-status.js';
+import type { ProjectState } from './project-state/project-state.js';
+import { ProposalNotAcceptedError } from './proposal-not-accepted-error.js';
+import { SourceStateMismatchError } from './source-state-mismatch-error.js';
 
 export class Project {
   private constructor(private state: ProjectState) {}
