@@ -76,6 +76,10 @@ export class ChangeProposal {
     this.transitionTo(ProposalStatus.Applying, ProposalStatus.ApplicationFailed);
   }
 
+  abandon(): void {
+    this.transitionTo(ProposalStatus.Rejected, ProposalStatus.ApplicationFailed);
+  }
+
   private transitionTo(next: ProposalStatus, allowedFrom: ProposalStatus): void {
     if (this.proposalStatus !== allowedFrom) {
       throw new InvalidProposalTransitionError(this.proposalStatus, next);

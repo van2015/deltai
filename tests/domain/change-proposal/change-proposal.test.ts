@@ -165,6 +165,18 @@ describe('ChangeProposal lifecycle', () => {
     expect(proposal.status).toBe(ProposalStatus.Applying);
   });
 
+  it('can be rejected after an application failure', () => {
+    const proposal = createProposal();
+    proposal.review();
+    proposal.accept();
+    proposal.apply();
+    proposal.fail();
+
+    proposal.abandon();
+
+    expect(proposal.status).toBe(ProposalStatus.Rejected);
+  });
+
   it('cannot be accepted while generated', () => {
     const proposal = createProposal();
 
