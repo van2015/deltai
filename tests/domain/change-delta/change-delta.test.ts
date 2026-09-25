@@ -26,6 +26,10 @@ describe('ChangeDelta', () => {
     const delta = ChangeDelta.between(sourceState, targetState);
 
     expect(delta.changes).toEqual([{ type: ChangeType.Added, element: newElement }]);
+    expect(delta.changes).toContainEqual({
+      type: ChangeType.Added,
+      element: expect.objectContaining({ id: newElement.id }),
+    });
   });
 
   it('contains a removed element when the target state no longer contains an element', () => {
@@ -36,6 +40,10 @@ describe('ChangeDelta', () => {
     const delta = ChangeDelta.between(sourceState, targetState);
 
     expect(delta.changes).toEqual([{ type: ChangeType.Removed, element: removedElement }]);
+    expect(delta.changes).toContainEqual({
+      type: ChangeType.Removed,
+      element: expect.objectContaining({ id: removedElement.id }),
+    });
   });
 
   it('contains a modified element when an element changes', () => {
@@ -47,6 +55,14 @@ describe('ChangeDelta', () => {
     const delta = ChangeDelta.between(sourceState, targetState);
 
     expect(delta.changes).toEqual([{ type: ChangeType.Modified, element: after }]);
+    expect(delta.changes).not.toContainEqual({
+      type: ChangeType.Added,
+      element: after,
+    });
+    expect(delta.changes).not.toContainEqual({
+      type: ChangeType.Removed,
+      element: before,
+    });
   });
 
   it('contains an added relationship when the target state contains a new relationship', () => {
@@ -140,5 +156,19 @@ describe('ChangeDelta', () => {
 
     expect(sourceState.hasSameModelAs(sourceBefore)).toBe(true);
     expect(targetState.hasSameModelAs(targetBefore)).toBe(true);
+  });
+
+  it('treats different elements with identical content as separate elements', () => {
+    const sourceElement: Element = { id: 'order', name: 'Order' };
+    const targetElement: Element = { id: 'purchase-order', name: 'Order' };
+    const sourceState = ProjectStateBuilder.aState().withElement(sourceElement).build();
+    const targetState = ProjectStateBuilder.aState().withElement(targetElement).build();
+
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(delta.changes).toEqual([
+      { type: ChangeType.Added, element: targetElement },
+      { type: ChangeType.Removed, element: sourceElement },
+    ]);
   });
 });
