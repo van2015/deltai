@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
 import { InvalidProposalTransitionError } from '@/domain/change-proposal/invalid-proposal-transition-error.js';
 import { MissingSourceStateError } from '@/domain/change-proposal/missing-source-state-error.js';
+import { MissingTargetStateError } from '@/domain/change-proposal/missing-target-state-error.js';
 import { MismatchedProjectError } from '@/domain/change-proposal/mismatched-project-error.js';
 import { ProposalStatus } from '@/domain/change-proposal/proposal-status.js';
 import type { ProjectState } from '@/domain/project/project-state/project-state.js';
@@ -73,6 +74,14 @@ describe('ChangeProposal', () => {
     expect(() =>
       ChangeProposal.create(undefined as unknown as ProjectState, targetState),
     ).toThrow(MissingSourceStateError);
+  });
+
+  it('cannot be created without a target state', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+
+    expect(() =>
+      ChangeProposal.create(sourceState, undefined as unknown as ProjectState),
+    ).toThrow(MissingTargetStateError);
   });
 });
 
