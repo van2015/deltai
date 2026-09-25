@@ -177,6 +177,23 @@ describe('ChangeProposal lifecycle', () => {
     expect(proposal.status).toBe(ProposalStatus.Rejected);
   });
 
+  it('cannot be applied while under review', () => {
+    const proposal = createProposal();
+    proposal.review();
+
+    expect(() => proposal.apply()).toThrow(InvalidProposalTransitionError);
+    expect(proposal.status).toBe(ProposalStatus.UnderReview);
+  });
+
+  it('cannot be accepted after being superseded', () => {
+    const proposal = createProposal();
+    proposal.review();
+    proposal.supersede();
+
+    expect(() => proposal.accept()).toThrow(InvalidProposalTransitionError);
+    expect(proposal.status).toBe(ProposalStatus.Superseded);
+  });
+
   it('cannot be accepted while generated', () => {
     const proposal = createProposal();
 
@@ -233,6 +250,32 @@ describe('ChangeProposal lifecycle', () => {
     proposal.succeed();
 
     expect(() => proposal.apply()).toThrow(InvalidProposalTransitionError);
+    expect(proposal.status).toBe(ProposalStatus.Applied);
+  });
+
+  it('is terminal after being applied', () => {
+    const proposal = createProposal();
+    proposal.review();
+    proposal.accept();
+    proposal.apply();
+    proposal.succeed();
+
+    const transitions = [
+      () => proposal.review(),
+      () => proposal.accept(),
+      () => proposal.reject(),
+      () => proposal.supersede(),
+      () => proposal.apply(),
+      () => proposal.succeed(),
+      () => proposal.fail(),
+      () => proposal.retry(),
+      () => proposal.abandon(),
+    ];
+
+    for (const transition of transitions) {
+      expect(transition).toThrow(InvalidProposalTransitionError);
+    }
+
     expect(proposal.status).toBe(ProposalStatus.Applied);
   });
 });
