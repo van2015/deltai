@@ -171,4 +171,29 @@ describe('ChangeDelta', () => {
       { type: ChangeType.Removed, element: sourceElement },
     ]);
   });
+
+  it('is equivalent to another delta with the same states and changes', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const firstDelta = ChangeDelta.between(sourceState, targetState);
+    const secondDelta = ChangeDelta.between(sourceState, targetState);
+
+    expect(firstDelta.isEquivalentTo(secondDelta)).toBe(true);
+  });
+
+  it('is not equivalent to a delta with different changes', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const differentTargetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Customer', name: 'Customer' })
+      .build();
+    const firstDelta = ChangeDelta.between(sourceState, targetState);
+    const secondDelta = ChangeDelta.between(sourceState, differentTargetState);
+
+    expect(firstDelta.isEquivalentTo(secondDelta)).toBe(false);
+  });
 });

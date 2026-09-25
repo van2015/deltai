@@ -30,6 +30,14 @@ export class ChangeDelta {
     return this.changeList;
   }
 
+  isEquivalentTo(otherDelta: ChangeDelta): boolean {
+    return (
+      this.sourceState.id === otherDelta.sourceState.id &&
+      this.targetState.id === otherDelta.targetState.id &&
+      ChangeDelta.sameChanges(this.changeList, otherDelta.changeList)
+    );
+  }
+
   private static diffElements(source: ProjectState, target: ProjectState): readonly Change[] {
     const sourceElements = source.getElements();
     const targetElements = target.getElements();
@@ -82,5 +90,43 @@ export class ChangeDelta {
       .map((relationship) => ({ type: ChangeType.Modified, relationship }));
 
     return [...added, ...removed, ...modified];
+  }
+
+  private static sameChanges(left: readonly Change[], right: readonly Change[]): boolean {
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    const counts = new Map<string, number>();
+
+    for (const change of left) {
+      const key = ChangeDelta.changeKey(change);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    for (const change of right) {
+      const key = ChangeDelta.changeKey(change);
+      const count = counts.get(key);
+
+      if (count === undefined) {
+        return false;
+      }
+
+      if (count === 1) {
+        counts.delete(key);
+      } else {
+        counts.set(key, count - 1);
+      }
+    }
+
+    return counts.size === 0;
+  }
+
+  private static changeKey(change: Change): string {
+    if ('element' in change) {
+      return `element:${change.type}:${change.element.id}:${change.element.name}`;
+    }
+
+    return `relationship:${change.type}:${change.relationship.id}:${change.relationship.name}`;
   }
 }
