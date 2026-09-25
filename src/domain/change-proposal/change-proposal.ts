@@ -1,5 +1,6 @@
 import type { ProjectState } from '../project/project-state/project-state.js';
 import { InvalidProposalTransitionError } from './invalid-proposal-transition-error.js';
+import { MissingSourceStateError } from './missing-source-state-error.js';
 import { MismatchedProjectError } from './mismatched-project-error.js';
 import { ProposalStatus } from './proposal-status.js';
 
@@ -11,6 +12,10 @@ export class ChangeProposal {
   ) {}
 
   static create(sourceState: ProjectState, targetState: ProjectState): ChangeProposal {
+    if (sourceState === undefined) {
+      throw new MissingSourceStateError();
+    }
+
     if (sourceState.projectId !== targetState.projectId) {
       throw new MismatchedProjectError(sourceState.projectId, targetState.projectId);
     }
