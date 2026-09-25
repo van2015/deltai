@@ -16,7 +16,7 @@ export class Project {
   }
 
   apply(proposal: ChangeProposal): void {
-    if (proposal.sourceState !== this.state) {
+    if (proposal.isStaleFor(this)) {
       throw new SourceStateMismatchError();
     }
 

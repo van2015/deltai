@@ -1,4 +1,5 @@
 import type { ProjectState } from '../project/project-state/project-state.js';
+import type { Project } from '../project/project.js';
 import { InvalidProposalTransitionError } from './invalid-proposal-transition-error.js';
 import { MissingSourceStateError } from './missing-source-state-error.js';
 import { MissingTargetStateError } from './missing-target-state-error.js';
@@ -42,6 +43,10 @@ export class ChangeProposal {
 
   hasNoChanges(): boolean {
     return this.source === this.target || this.source.hasSameModelAs(this.target);
+  }
+
+  isStaleFor(project: Project): boolean {
+    return this.sourceState !== project.currentState;
   }
 
   review(): void {

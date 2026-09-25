@@ -6,6 +6,7 @@ import { MissingSourceStateError } from '@/domain/change-proposal/missing-source
 import { MissingTargetStateError } from '@/domain/change-proposal/missing-target-state-error.js';
 import { MismatchedProjectError } from '@/domain/change-proposal/mismatched-project-error.js';
 import { ProposalStatus } from '@/domain/change-proposal/proposal-status.js';
+import { Project } from '@/domain/project/project.js';
 import type { ProjectState } from '@/domain/project/project-state/project-state.js';
 
 import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
@@ -82,6 +83,50 @@ describe('ChangeProposal', () => {
     expect(() =>
       ChangeProposal.create(sourceState, undefined as unknown as ProjectState),
     ).toThrow(MissingTargetStateError);
+  });
+
+  it('is valid when its source state is the project current state', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState().build();
+    const project = Project.create(sourceState);
+    const proposal = ChangeProposal.create(sourceState, targetState);
+
+    expect(proposal.isStaleFor(project)).toBe(false);
+  });
+
+  it('is stale when its source state is not the project current state', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState().build();
+    const currentState = ProjectStateBuilder.aState().build();
+    const project = Project.create(currentState);
+    const proposal = ChangeProposal.create(sourceState, targetState);
+
+    expect(proposal.isStaleFor(project)).toBe(true);
+  });
+
+  it('can be UnderReview while stale', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState().build();
+    const currentState = ProjectStateBuilder.aState().build();
+    const project = Project.create(currentState);
+    const proposal = ChangeProposal.create(sourceState, targetState);
+    proposal.review();
+
+    expect(proposal.isStaleFor(project)).toBe(true);
+    expect(proposal.status).toBe(ProposalStatus.UnderReview);
+  });
+
+  it('can be Accepted while stale', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState().build();
+    const currentState = ProjectStateBuilder.aState().build();
+    const project = Project.create(currentState);
+    const proposal = ChangeProposal.create(sourceState, targetState);
+    proposal.review();
+    proposal.accept();
+
+    expect(proposal.isStaleFor(project)).toBe(true);
+    expect(proposal.status).toBe(ProposalStatus.Accepted);
   });
 });
 
