@@ -60,6 +60,10 @@ export class ChangeDelta {
     );
   }
 
+  contains(change: Change): boolean {
+    return this.changeList.some((candidate) => candidate.isEquivalentTo(change));
+  }
+
   private static diffElements(source: ProjectState, target: ProjectState): readonly Change[] {
     const sourceElements = source.getElements();
     const targetElements = target.getElements();

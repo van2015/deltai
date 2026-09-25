@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { Change } from '@/domain/change-delta/change.js';
+import { ChangeDelta } from '@/domain/change-delta/change-delta.js';
+import { ChangeType } from '@/domain/change-delta/change-type.js';
+import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
 import { AnnotationNotFoundError } from '@/domain/view-context/annotation-not-found-error.js';
+import { ChangeDeltaNotAssociatedError } from '@/domain/view-context/change-delta-not-associated-error.js';
+import { ChangeNotInDeltaError } from '@/domain/view-context/change-not-in-delta-error.js';
 import { ElementNotInStateError } from '@/domain/view-context/element-not-in-state-error.js';
 import { InvalidAnnotationTextError } from '@/domain/view-context/invalid-annotation-text-error.js';
 import { RelationshipNotInStateError } from '@/domain/view-context/relationship-not-in-state-error.js';
@@ -8,6 +14,39 @@ import { ViewContext } from '@/domain/view-context/view-context.js';
 import { ViewContextSubmittedError } from '@/domain/view-context/view-context-submitted-error.js';
 
 import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
+
+const buildStatesWithDelta = () => {
+  const sourceState = ProjectStateBuilder.aState()
+    .withElement({ id: 'B', name: 'B' })
+    .withElement({ id: 'C', name: 'C' })
+    .build();
+  const targetState = ProjectStateBuilder.aState()
+    .withElement({ id: 'A', name: 'A' })
+    .withElement({ id: 'B', name: 'B2' })
+    .build();
+
+  return { sourceState, targetState, delta: ChangeDelta.between(sourceState, targetState) };
+};
+
+const firstChangeOf = (delta: ChangeDelta): Change => {
+  const change = delta.changes[0];
+
+  if (change === undefined) {
+    throw new Error('Expected the delta to contain changes');
+  }
+
+  return change;
+};
+
+const changeOfType = (delta: ChangeDelta, type: ChangeType): Change => {
+  const change = delta.changes.find((candidate) => candidate.type === type);
+
+  if (change === undefined) {
+    throw new Error(`Expected the delta to contain a ${type} change`);
+  }
+
+  return change;
+};
 
 describe('ViewContext', () => {
   it('can be created empty', () => {
@@ -299,5 +338,130 @@ describe('ViewContext', () => {
     expect(() => context.annotate('New note')).toThrow(ViewContextSubmittedError);
     expect(() => context.removeAnnotation(annotation.id)).toThrow(ViewContextSubmittedError);
     expect(context.annotations).toHaveLength(1);
+  });
+
+  it('can express the rejection of a change', () => {
+    const { sourceState, delta } = buildStatesWithDelta();
+    const context = ViewContext.create(sourceState, delta);
+    const change = firstChangeOf(delta);
+
+    const rejected = context.rejectChange(change);
+
+    expect(context.rejectedChanges).toHaveLength(1);
+    expect(rejected.change).toBe(change);
+  });
+
+  it('can reject a concrete change of a change delta', () => {
+    const { sourceState, delta } = buildStatesWithDelta();
+    const context = ViewContext.create(sourceState, delta);
+    const modifiedChange = changeOfType(delta, ChangeType.Modified);
+
+    context.rejectChange(modifiedChange);
+
+    expect(
+      context.rejectedChanges[0]?.change.isEquivalentTo(modifiedChange),
+    ).toBe(true);
+    expect(context.rejectedChanges).toHaveLength(1);
+  });
+
+  it('can reject several changes', () => {
+    const { sourceState, delta } = buildStatesWithDelta();
+    const context = ViewContext.create(sourceState, delta);
+
+    for (const change of delta.changes) {
+      context.rejectChange(change);
+    }
+
+    expect(context.rejectedChanges).toHaveLength(delta.changes.length);
+  });
+
+  it('does not modify the original change proposal when a change is rejected', () => {
+    const { sourceState, targetState, delta } = buildStatesWithDelta();
+    const proposal = ChangeProposal.create(sourceState, targetState);
+    const deltaBefore = ChangeDelta.from(proposal);
+    const statusBefore = proposal.status;
+    const context = ViewContext.create(sourceState, delta);
+
+    context.rejectChange(firstChangeOf(delta));
+
+    expect(proposal.status).toBe(statusBefore);
+    expect(ChangeDelta.from(proposal).isEquivalentTo(deltaBefore)).toBe(true);
+  });
+
+  it('does not modify the project state when a change is rejected', () => {
+    const { sourceState, targetState, delta } = buildStatesWithDelta();
+    const sourceBefore = ProjectStateBuilder.aState()
+      .withElement({ id: 'B', name: 'B' })
+      .withElement({ id: 'C', name: 'C' })
+      .build();
+    const targetBefore = ProjectStateBuilder.aState()
+      .withElement({ id: 'A', name: 'A' })
+      .withElement({ id: 'B', name: 'B2' })
+      .build();
+    const context = ViewContext.create(sourceState, delta);
+
+    context.rejectChange(firstChangeOf(delta));
+
+    expect(sourceState.hasSameModelAs(sourceBefore)).toBe(true);
+    expect(targetState.hasSameModelAs(targetBefore)).toBe(true);
+  });
+
+  it('associates the rejection with the rejected change', () => {
+    const { sourceState, delta } = buildStatesWithDelta();
+    const context = ViewContext.create(sourceState, delta);
+    const addedChange = changeOfType(delta, ChangeType.Added);
+
+    const rejected = context.rejectChange(addedChange);
+
+    expect(rejected.change).toBe(addedChange);
+    expect(rejected.elementId).toBe('A');
+    expect(rejected.relationshipId).toBeUndefined();
+    expect(context.rejectedChanges[0]).toBe(rejected);
+  });
+
+  it('rejects changes that do not belong to the associated delta', () => {
+    const { sourceState, delta } = buildStatesWithDelta();
+    const context = ViewContext.create(sourceState, delta);
+    const foreignChange = Change.forElement(ChangeType.Added, {
+      id: 'Invoice',
+      name: 'Invoice',
+    });
+
+    expect(() => context.rejectChange(foreignChange)).toThrow(ChangeNotInDeltaError);
+    expect(context.rejectedChanges).toHaveLength(0);
+  });
+
+  it('rejects changes when no delta is associated', () => {
+    const { delta } = buildStatesWithDelta();
+    const context = ViewContext.create();
+
+    expect(() => context.rejectChange(firstChangeOf(delta))).toThrow(
+      ChangeDeltaNotAssociatedError,
+    );
+  });
+
+  it('does not duplicate a rejected change', () => {
+    const { sourceState, delta } = buildStatesWithDelta();
+    const context = ViewContext.create(sourceState, delta);
+    const change = firstChangeOf(delta);
+
+    const firstRejection = context.rejectChange(change);
+    const secondRejection = context.rejectChange(change);
+
+    expect(context.rejectedChanges).toHaveLength(1);
+    expect(secondRejection).toBe(firstRejection);
+  });
+
+  it('cannot reject changes after being submitted', () => {
+    const { sourceState, delta } = buildStatesWithDelta();
+    const context = ViewContext.create(sourceState, delta);
+
+    context.rejectChange(firstChangeOf(delta));
+    context.submit();
+
+    expect(() => context.rejectChange(changeOfType(delta, ChangeType.Modified))).toThrow(
+      ViewContextSubmittedError,
+    );
+    expect(context.rejectedChanges).toHaveLength(1);
   });
 });

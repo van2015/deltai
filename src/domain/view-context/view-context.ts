@@ -1,28 +1,35 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Change } from '../change-delta/change.js';
+import type { ChangeDelta } from '../change-delta/change-delta.js';
 import type { Element } from '../project/project-state/element.js';
 import type { ProjectState } from '../project/project-state/project-state.js';
 import { AnnotationNotFoundError } from './annotation-not-found-error.js';
 import { Annotation } from './annotation.js';
 import type { AnnotationId } from './annotation-id.js';
+import { ChangeDeltaNotAssociatedError } from './change-delta-not-associated-error.js';
+import { ChangeNotInDeltaError } from './change-not-in-delta-error.js';
 import { ElementNotInStateError } from './element-not-in-state-error.js';
 import type { ViewContextId } from './view-context-id.js';
 import { RelationshipNotInStateError } from './relationship-not-in-state-error.js';
+import { RejectedChange } from './rejected-change.js';
 import { Selection } from './selection.js';
 import { ViewContextSubmittedError } from './view-context-submitted-error.js';
 
 export class ViewContext {
   private selectedElements: Selection = Selection.empty();
   private annotationList: Annotation[] = [];
+  private rejectedChangeList: RejectedChange[] = [];
 
   private constructor(
     private readonly contextId: ViewContextId,
     private readonly state: ProjectState | undefined,
+    private readonly associatedDelta: ChangeDelta | undefined,
     private submitted = false,
   ) {}
 
-  static create(projectState?: ProjectState): ViewContext {
-    return new ViewContext(randomUUID(), projectState);
+  static create(projectState?: ProjectState, delta?: ChangeDelta): ViewContext {
+    return new ViewContext(randomUUID(), projectState, delta);
   }
 
   get id(): ViewContextId {
@@ -43,6 +50,14 @@ export class ViewContext {
 
   get annotations(): readonly Annotation[] {
     return [...this.annotationList];
+  }
+
+  get delta(): ChangeDelta | undefined {
+    return this.associatedDelta;
+  }
+
+  get rejectedChanges(): readonly RejectedChange[] {
+    return [...this.rejectedChangeList];
   }
 
   select(elementId: string): void {
@@ -116,6 +131,31 @@ export class ViewContext {
     }
 
     this.annotationList.splice(index, 1);
+  }
+
+  rejectChange(change: Change): RejectedChange {
+    this.ensureNotSubmitted();
+
+    if (this.associatedDelta === undefined) {
+      throw new ChangeDeltaNotAssociatedError();
+    }
+
+    if (!this.associatedDelta.contains(change)) {
+      throw new ChangeNotInDeltaError();
+    }
+
+    const existing = this.rejectedChangeList.find((rejected) =>
+      rejected.change.isEquivalentTo(change),
+    );
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const rejected = RejectedChange.of(change);
+    this.rejectedChangeList.push(rejected);
+
+    return rejected;
   }
 
   submit(): void {
