@@ -2,8 +2,13 @@ import { randomUUID } from 'node:crypto';
 
 export type ProjectStateId = string;
 
+export interface Element {
+  readonly id: string;
+  readonly name: string;
+}
+
 export interface ProjectModel {
-  readonly elements: readonly unknown[];
+  readonly elements: readonly Element[];
   readonly relationships: readonly unknown[];
 }
 
