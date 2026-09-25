@@ -37,7 +37,46 @@ export class ProjectState {
     return this.project;
   }
 
-  get model(): ProjectModel {
-    return this.projectModel;
+  getElements(): readonly Element[] {
+    return this.projectModel.elements.map((element) => ({ ...element }));
   }
+
+  getRelationships(): readonly Relationship[] {
+    return this.projectModel.relationships.map((relationship) => ({ ...relationship }));
+  }
+
+  hasSameModelAs(otherState: ProjectState): boolean {
+    return (
+      sameElements(this.projectModel.elements, otherState.projectModel.elements) &&
+      sameRelationships(
+        this.projectModel.relationships,
+        otherState.projectModel.relationships,
+      )
+    );
+  }
+}
+
+function sameElements(left: readonly Element[], right: readonly Element[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((element) => {
+    const other = right.find((candidate) => candidate.id === element.id);
+    return other !== undefined && other.name === element.name;
+  });
+}
+
+function sameRelationships(
+  left: readonly Relationship[],
+  right: readonly Relationship[],
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((relationship) => {
+    const other = right.find((candidate) => candidate.id === relationship.id);
+    return other !== undefined && other.name === relationship.name;
+  });
 }

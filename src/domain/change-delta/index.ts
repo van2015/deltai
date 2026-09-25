@@ -52,18 +52,21 @@ export class ChangeDelta {
 }
 
 function diffElements(source: ProjectState, target: ProjectState): readonly Change[] {
-  const sourceById = new Map(source.model.elements.map((element) => [element.id, element]));
-  const targetIds = new Set(target.model.elements.map((element) => element.id));
+  const sourceElements = source.getElements();
+  const targetElements = target.getElements();
 
-  const added = target.model.elements
+  const sourceById = new Map(sourceElements.map((element) => [element.id, element]));
+  const targetIds = new Set(targetElements.map((element) => element.id));
+
+  const added = targetElements
     .filter((element) => !sourceById.has(element.id))
     .map((element) => ({ type: ChangeType.Added, element }));
 
-  const removed = source.model.elements
+  const removed = sourceElements
     .filter((element) => !targetIds.has(element.id))
     .map((element) => ({ type: ChangeType.Removed, element }));
 
-  const modified = target.model.elements
+  const modified = targetElements
     .filter((element) => {
       const before = sourceById.get(element.id);
       return before !== undefined && before.name !== element.name;
@@ -77,9 +80,10 @@ function diffAddedRelationships(
   source: ProjectState,
   target: ProjectState,
 ): readonly Change[] {
-  const sourceIds = new Set(source.model.relationships.map((relationship) => relationship.id));
+  const sourceIds = new Set(source.getRelationships().map((relationship) => relationship.id));
 
-  return target.model.relationships
+  return target
+    .getRelationships()
     .filter((relationship) => !sourceIds.has(relationship.id))
     .map((relationship) => ({ type: ChangeType.Added, relationship }));
 }
