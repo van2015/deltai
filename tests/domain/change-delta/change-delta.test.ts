@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ChangeDelta, ChangeType } from '@/domain/change-delta/index.js';
 import { ProjectState } from '@/domain/project/project-state/index.js';
-import type { Element } from '@/domain/project/project-state/index.js';
+import type { Element, Relationship } from '@/domain/project/project-state/index.js';
 
 describe('ChangeDelta', () => {
   it('represents the difference between two project states', () => {
@@ -50,5 +50,20 @@ describe('ChangeDelta', () => {
     const delta = ChangeDelta.between(sourceState, targetState);
 
     expect(delta.changes).toEqual([{ type: ChangeType.Modified, element: after }]);
+  });
+
+  it('contains an added relationship when the target state contains a new relationship', () => {
+    const newRelationship: Relationship = { id: 'Order->Customer', name: 'depends' };
+    const sourceState = ProjectState.create({ elements: [], relationships: [] });
+    const targetState = ProjectState.create({
+      elements: [],
+      relationships: [newRelationship],
+    });
+
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(delta.changes).toEqual([
+      { type: ChangeType.Added, relationship: newRelationship },
+    ]);
   });
 });

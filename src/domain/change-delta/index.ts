@@ -1,4 +1,8 @@
-import type { Element, ProjectState } from '../project/project-state/index.js';
+import type {
+  Element,
+  ProjectState,
+  Relationship,
+} from '../project/project-state/index.js';
 
 export enum ChangeType {
   Added = 'Added',
@@ -6,10 +10,17 @@ export enum ChangeType {
   Modified = 'Modified',
 }
 
-export interface Change {
+export interface ElementChange {
   readonly type: ChangeType;
   readonly element: Element;
 }
+
+export interface RelationshipChange {
+  readonly type: ChangeType;
+  readonly relationship: Relationship;
+}
+
+export type Change = ElementChange | RelationshipChange;
 
 export class ChangeDelta {
   private constructor(
@@ -19,7 +30,12 @@ export class ChangeDelta {
   ) {}
 
   static between(sourceState: ProjectState, targetState: ProjectState): ChangeDelta {
-    return new ChangeDelta(sourceState, targetState, diffElements(sourceState, targetState));
+    const changes = [
+      ...diffElements(sourceState, targetState),
+      ...diffAddedRelationships(sourceState, targetState),
+    ];
+
+    return new ChangeDelta(sourceState, targetState, changes);
   }
 
   get sourceState(): ProjectState {
@@ -55,4 +71,15 @@ function diffElements(source: ProjectState, target: ProjectState): readonly Chan
     .map((element) => ({ type: ChangeType.Modified, element }));
 
   return [...added, ...removed, ...modified];
+}
+
+function diffAddedRelationships(
+  source: ProjectState,
+  target: ProjectState,
+): readonly Change[] {
+  const sourceIds = new Set(source.model.relationships.map((relationship) => relationship.id));
+
+  return target.model.relationships
+    .filter((relationship) => !sourceIds.has(relationship.id))
+    .map((relationship) => ({ type: ChangeType.Added, relationship }));
 }

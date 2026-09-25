@@ -7,9 +7,14 @@ export interface Element {
   readonly name: string;
 }
 
+export interface Relationship {
+  readonly id: string;
+  readonly name: string;
+}
+
 export interface ProjectModel {
   readonly elements: readonly Element[];
-  readonly relationships: readonly unknown[];
+  readonly relationships: readonly Relationship[];
 }
 
 export class ProjectState {
