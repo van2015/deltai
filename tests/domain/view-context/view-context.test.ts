@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ElementNotInStateError } from '@/domain/view-context/element-not-in-state-error.js';
 import { ViewContext } from '@/domain/view-context/view-context.js';
 
 import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
@@ -62,5 +63,89 @@ describe('ViewContext', () => {
         replacementState;
     }).toThrow();
     expect(context.projectState).toBe(projectState);
+  });
+
+  it('can contain one selected element', () => {
+    const projectState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const context = ViewContext.create(projectState);
+
+    context.select('Order');
+
+    expect(context.selection.getElements().map((element) => element.id)).toEqual(['Order']);
+  });
+
+  it('can contain several selected elements', () => {
+    const projectState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .withElement({ id: 'Customer', name: 'Customer' })
+      .withElement({ id: 'Payment', name: 'Payment' })
+      .build();
+    const context = ViewContext.create(projectState);
+
+    context.select('Order');
+    context.select('Customer');
+    context.select('Payment');
+
+    expect(context.selection.getElements().map((element) => element.id)).toEqual([
+      'Order',
+      'Customer',
+      'Payment',
+    ]);
+  });
+
+  it('does not include an element twice in the selection', () => {
+    const projectState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const context = ViewContext.create(projectState);
+
+    context.select('Order');
+    context.select('Order');
+
+    expect(context.selection.size()).toBe(1);
+  });
+
+  it('only references elements that exist in the project state', () => {
+    const projectState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const context = ViewContext.create(projectState);
+
+    expect(() => context.select('Unknown')).toThrow(ElementNotInStateError);
+    expect(context.selection.isEmpty()).toBe(true);
+  });
+
+  it('can contain an empty selection', () => {
+    const projectState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const context = ViewContext.create(projectState);
+
+    expect(context.selection.isEmpty()).toBe(true);
+
+    context.select('Order');
+    context.deselect('Order');
+
+    expect(context.selection.isEmpty()).toBe(true);
+  });
+
+  it('does not modify the project state when the selection changes', () => {
+    const projectState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .withElement({ id: 'Customer', name: 'Customer' })
+      .build();
+    const expectedState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .withElement({ id: 'Customer', name: 'Customer' })
+      .build();
+    const context = ViewContext.create(projectState);
+
+    context.select('Order');
+    context.select('Customer');
+    context.deselect('Order');
+
+    expect(projectState.hasSameModelAs(expectedState)).toBe(true);
   });
 });
