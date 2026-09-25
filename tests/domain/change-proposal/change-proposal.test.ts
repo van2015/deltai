@@ -19,6 +19,16 @@ describe('ChangeProposal', () => {
 
     expect(proposal.status).toBe(ProposalStatus.Generated);
   });
+
+  it('is created with the given source and target states', () => {
+    const sourceState = ProjectState.create({ elements: [], relationships: [] });
+    const targetState = ProjectState.create({ elements: [], relationships: [] });
+
+    const proposal = ChangeProposal.create(sourceState, targetState);
+
+    expect(proposal.sourceState).toBe(sourceState);
+    expect(proposal.targetState).toBe(targetState);
+  });
 });
 
 describe('ChangeProposal lifecycle', () => {
