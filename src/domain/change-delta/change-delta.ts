@@ -1,4 +1,5 @@
 import type { ProjectState } from '../project/project-state/project-state.js';
+import type { ChangeProposal } from '../change-proposal/change-proposal.js';
 import type { Change } from './change.js';
 import { ChangeType } from './change-type.js';
 
@@ -18,6 +19,10 @@ export class ChangeDelta {
     return new ChangeDelta(sourceState, targetState, changes);
   }
 
+  static from(proposal: ChangeProposal): ChangeDelta {
+    return ChangeDelta.between(proposal.sourceState, proposal.targetState);
+  }
+
   get sourceState(): ProjectState {
     return this.source;
   }
@@ -27,7 +32,7 @@ export class ChangeDelta {
   }
 
   get changes(): readonly Change[] {
-    return this.changeList;
+    return [...this.changeList];
   }
 
   isEquivalentTo(otherDelta: ChangeDelta): boolean {

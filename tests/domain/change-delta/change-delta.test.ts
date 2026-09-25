@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
+import type { Change } from '@/domain/change-delta/change.js';
 import { ChangeDelta } from '@/domain/change-delta/change-delta.js';
 import { ChangeType } from '@/domain/change-delta/change-type.js';
 import type { Element } from '@/domain/project/project-state/element.js';
@@ -193,6 +195,70 @@ describe('ChangeDelta', () => {
       .build();
     const firstDelta = ChangeDelta.between(sourceState, targetState);
     const secondDelta = ChangeDelta.between(sourceState, differentTargetState);
+
+    expect(firstDelta.isEquivalentTo(secondDelta)).toBe(false);
+  });
+
+  it('can be created from a change proposal source and target', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const proposal = ChangeProposal.create(sourceState, targetState);
+
+    const delta = ChangeDelta.from(proposal);
+
+    expect(delta.sourceState).toBe(sourceState);
+    expect(delta.targetState).toBe(targetState);
+  });
+
+  it('produces equivalent deltas when queried twice for the same proposal', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const proposal = ChangeProposal.create(sourceState, targetState);
+
+    const firstDelta = ChangeDelta.from(proposal);
+    const secondDelta = ChangeDelta.from(proposal);
+
+    expect(firstDelta.isEquivalentTo(secondDelta)).toBe(true);
+  });
+
+  it('does not modify the proposal when its representation is changed', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const proposal = ChangeProposal.create(sourceState, targetState);
+    const delta = ChangeDelta.from(proposal);
+    const changes = delta.changes as Change[];
+
+    changes.push({
+      type: ChangeType.Added,
+      element: { id: 'Customer', name: 'Customer' },
+    });
+
+    const rebuiltDelta = ChangeDelta.from(proposal);
+
+    expect(rebuiltDelta.isEquivalentTo(delta)).toBe(true);
+    expect(proposal.sourceState).toBe(sourceState);
+    expect(proposal.targetState).toBe(targetState);
+  });
+
+  it('produces a different delta for a proposal with a different target state', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const firstTarget = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const secondTarget = ProjectStateBuilder.aState()
+      .withElement({ id: 'Customer', name: 'Customer' })
+      .build();
+    const firstProposal = ChangeProposal.create(sourceState, firstTarget);
+    const secondProposal = ChangeProposal.create(sourceState, secondTarget);
+
+    const firstDelta = ChangeDelta.from(firstProposal);
+    const secondDelta = ChangeDelta.from(secondProposal);
 
     expect(firstDelta.isEquivalentTo(secondDelta)).toBe(false);
   });
