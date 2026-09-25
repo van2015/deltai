@@ -30,6 +30,10 @@ export class ChangeProposal {
     return this.proposalStatus;
   }
 
+  hasNoChanges(): boolean {
+    return this.source === this.target || this.source.hasSameModelAs(this.target);
+  }
+
   review(): void {
     this.transitionTo(ProposalStatus.UnderReview, ProposalStatus.Generated);
   }

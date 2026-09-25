@@ -30,6 +30,32 @@ describe('ChangeProposal', () => {
     expect(proposal.targetState).toBe(targetState);
   });
 
+  it('keeps source and target states immutable', () => {
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState().build();
+    const replacementState = ProjectStateBuilder.aState().build();
+    const proposal = ChangeProposal.create(sourceState, targetState);
+
+    expect(() => {
+      (proposal as unknown as { sourceState: typeof sourceState }).sourceState =
+        replacementState;
+    }).toThrow();
+    expect(() => {
+      (proposal as unknown as { targetState: typeof targetState }).targetState =
+        replacementState;
+    }).toThrow();
+
+    expect(proposal.sourceState).toBe(sourceState);
+    expect(proposal.targetState).toBe(targetState);
+  });
+
+  it('represents a transformation without changes when source and target are equal', () => {
+    const state = ProjectStateBuilder.aState().build();
+    const proposal = ChangeProposal.create(state, state);
+
+    expect(proposal.hasNoChanges()).toBe(true);
+  });
+
   it('cannot be created from states of different projects', () => {
     const sourceState = ProjectStateBuilder.aState().withProjectId('project-a').build();
     const targetState = ProjectStateBuilder.aState().withProjectId('project-b').build();
