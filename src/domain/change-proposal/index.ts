@@ -18,6 +18,16 @@ export class InvalidProposalTransitionError extends Error {
   }
 }
 
+export class MismatchedProjectError extends Error {
+  constructor(sourceProjectId: string, targetProjectId: string) {
+    super(
+      `Proposal source and target states belong to different projects ` +
+        `(${sourceProjectId} != ${targetProjectId})`,
+    );
+    this.name = 'MismatchedProjectError';
+  }
+}
+
 export class ChangeProposal {
   private constructor(
     private readonly source: ProjectState,
@@ -26,6 +36,10 @@ export class ChangeProposal {
   ) {}
 
   static create(sourceState: ProjectState, targetState: ProjectState): ChangeProposal {
+    if (sourceState.projectId !== targetState.projectId) {
+      throw new MismatchedProjectError(sourceState.projectId, targetState.projectId);
+    }
+
     return new ChangeProposal(sourceState, targetState, ProposalStatus.Generated);
   }
 

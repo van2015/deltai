@@ -3,14 +3,16 @@ import { describe, expect, it } from 'vitest';
 import {
   ChangeProposal,
   InvalidProposalTransitionError,
+  MismatchedProjectError,
   ProposalStatus,
 } from '@/domain/change-proposal/index.js';
-import { ProjectState } from '@/domain/project/project-state/index.js';
+
+import { ProjectStateBuilder } from '../../support/builders/project-state.builder.js';
 
 const createProposal = (): ChangeProposal =>
   ChangeProposal.create(
-    ProjectState.create({ elements: [], relationships: [] }),
-    ProjectState.create({ elements: [], relationships: [] }),
+    ProjectStateBuilder.aState().build(),
+    ProjectStateBuilder.aState().build(),
   );
 
 describe('ChangeProposal', () => {
@@ -21,13 +23,22 @@ describe('ChangeProposal', () => {
   });
 
   it('is created with the given source and target states', () => {
-    const sourceState = ProjectState.create({ elements: [], relationships: [] });
-    const targetState = ProjectState.create({ elements: [], relationships: [] });
+    const sourceState = ProjectStateBuilder.aState().build();
+    const targetState = ProjectStateBuilder.aState().build();
 
     const proposal = ChangeProposal.create(sourceState, targetState);
 
     expect(proposal.sourceState).toBe(sourceState);
     expect(proposal.targetState).toBe(targetState);
+  });
+
+  it('cannot be created from states of different projects', () => {
+    const sourceState = ProjectStateBuilder.aState().withProjectId('project-a').build();
+    const targetState = ProjectStateBuilder.aState().withProjectId('project-b').build();
+
+    expect(() => ChangeProposal.create(sourceState, targetState)).toThrow(
+      MismatchedProjectError,
+    );
   });
 });
 

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 export type ProjectStateId = string;
+export type ProjectId = string;
 
 export interface Element {
   readonly id: string;
@@ -20,15 +21,20 @@ export interface ProjectModel {
 export class ProjectState {
   private constructor(
     private readonly stateId: ProjectStateId,
+    private readonly project: ProjectId,
     private readonly projectModel: ProjectModel,
   ) {}
 
-  static create(model: ProjectModel): ProjectState {
-    return new ProjectState(randomUUID(), model);
+  static create(projectId: ProjectId, model: ProjectModel): ProjectState {
+    return new ProjectState(randomUUID(), projectId, model);
   }
 
   get id(): ProjectStateId {
     return this.stateId;
+  }
+
+  get projectId(): ProjectId {
+    return this.project;
   }
 
   get model(): ProjectModel {
