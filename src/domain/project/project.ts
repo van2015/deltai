@@ -15,7 +15,10 @@ export class Project {
     return this.state;
   }
 
-  apply(proposal: ChangeProposal): void {
+  apply(
+    proposal: ChangeProposal,
+    applyToWorkspace: (targetState: ProjectState) => void = () => {},
+  ): void {
     if (proposal.isStaleFor(this)) {
       throw new SourceStateMismatchError();
     }
@@ -24,6 +27,15 @@ export class Project {
       throw new ProposalNotAcceptedError(proposal.status);
     }
 
-    this.state = proposal.targetState;
+    proposal.apply();
+
+    try {
+      applyToWorkspace(proposal.targetState);
+      this.state = proposal.targetState;
+      proposal.succeed();
+    } catch (error) {
+      proposal.fail();
+      throw error;
+    }
   }
 }

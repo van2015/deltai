@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
+import { ProposalStatus } from '@/domain/change-proposal/proposal-status.js';
 import { Project } from '@/domain/project/project.js';
 import { ProposalNotAcceptedError } from '@/domain/project/proposal-not-accepted-error.js';
 import { SourceStateMismatchError } from '@/domain/project/source-state-mismatch-error.js';
@@ -29,6 +30,7 @@ describe('Project.apply', () => {
     project.apply(proposal);
 
     expect(project.currentState).toBe(state1);
+    expect(proposal.status).toBe(ProposalStatus.Applied);
   });
 
   it('cannot apply a proposal that is not accepted', () => {
@@ -61,5 +63,33 @@ describe('Project.apply', () => {
 
     expect(() => project.apply(proposal)).toThrow(SourceStateMismatchError);
     expect(project.currentState).toBe(state2);
+  });
+
+  it('rejects an accepted proposal that is stale', () => {
+    const state0 = ProjectStateBuilder.aState().build();
+    const state1 = ProjectStateBuilder.aState().build();
+    const state2 = ProjectStateBuilder.aState().build();
+    const proposal = ChangeProposal.create(state0, state1);
+    proposal.review();
+    proposal.accept();
+    const project = Project.create(state2);
+
+    expect(() => project.apply(proposal)).toThrow(SourceStateMismatchError);
+    expect(project.currentState).toBe(state2);
+    expect(proposal.status).toBe(ProposalStatus.Accepted);
+  });
+
+  it('preserves the current state when workspace application fails', () => {
+    const state0 = ProjectStateBuilder.aState().build();
+    const state1 = ProjectStateBuilder.aState().build();
+    const proposal = ChangeProposal.create(state0, state1);
+    proposal.review();
+    proposal.accept();
+    const project = Project.create(state0);
+    const failure = new Error('workspace application failed');
+
+    expect(() => project.apply(proposal, () => { throw failure; })).toThrow(failure);
+    expect(project.currentState).toBe(state0);
+    expect(proposal.status).toBe(ProposalStatus.ApplicationFailed);
   });
 });
