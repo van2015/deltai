@@ -62,4 +62,83 @@ describe('ChangeDelta', () => {
       { type: ChangeType.Added, relationship: newRelationship },
     ]);
   });
+
+  it('is empty when the states are equivalent', () => {
+    const element: Element = { id: 'Order', name: 'Order' };
+    const relationship: Relationship = { id: 'Order->Customer', name: 'depends' };
+    const sourceState = ProjectStateBuilder.aState()
+      .withElement(element)
+      .withRelationship(relationship)
+      .build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement(element)
+      .withRelationship(relationship)
+      .build();
+
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(delta.changes).toEqual([]);
+  });
+
+  it('does not mark an unchanged element as modified', () => {
+    const element: Element = { id: 'Order', name: 'Order' };
+    const sourceState = ProjectStateBuilder.aState().withElement(element).build();
+    const targetState = ProjectStateBuilder.aState().withElement(element).build();
+
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(delta.changes).not.toContainEqual({
+      type: ChangeType.Modified,
+      element,
+    });
+  });
+
+  it('contains a removed relationship when the target state no longer contains a relationship', () => {
+    const relationship: Relationship = { id: 'Order->Customer', name: 'depends' };
+    const sourceState = ProjectStateBuilder.aState()
+      .withRelationship(relationship)
+      .build();
+    const targetState = ProjectStateBuilder.aState().build();
+
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(delta.changes).toEqual([{ type: ChangeType.Removed, relationship }]);
+  });
+
+  it('contains a modified relationship when a relationship changes', () => {
+    const before: Relationship = { id: 'Order->Customer', name: 'depends' };
+    const after: Relationship = { id: 'Order->Customer', name: 'owns' };
+    const sourceState = ProjectStateBuilder.aState().withRelationship(before).build();
+    const targetState = ProjectStateBuilder.aState().withRelationship(after).build();
+
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(delta.changes).toEqual([{ type: ChangeType.Modified, relationship: after }]);
+  });
+
+  it('does not modify either state', () => {
+    const element: Element = { id: 'Order', name: 'Order' };
+    const relationship: Relationship = { id: 'Order->Customer', name: 'depends' };
+    const sourceState = ProjectStateBuilder.aState()
+      .withElement(element)
+      .withRelationship(relationship)
+      .build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'PurchaseOrder', name: 'PurchaseOrder' })
+      .withRelationship({ id: 'Order->Customer', name: 'owns' })
+      .build();
+    const sourceBefore = ProjectStateBuilder.aState()
+      .withElement(element)
+      .withRelationship(relationship)
+      .build();
+    const targetBefore = ProjectStateBuilder.aState()
+      .withElement({ id: 'PurchaseOrder', name: 'PurchaseOrder' })
+      .withRelationship({ id: 'Order->Customer', name: 'owns' })
+      .build();
+
+    ChangeDelta.between(sourceState, targetState);
+
+    expect(sourceState.hasSameModelAs(sourceBefore)).toBe(true);
+    expect(targetState.hasSameModelAs(targetBefore)).toBe(true);
+  });
 });

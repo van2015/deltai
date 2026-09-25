@@ -12,7 +12,7 @@ export class ChangeDelta {
   static between(sourceState: ProjectState, targetState: ProjectState): ChangeDelta {
     const changes = [
       ...ChangeDelta.diffElements(sourceState, targetState),
-      ...ChangeDelta.diffAddedRelationships(sourceState, targetState),
+      ...ChangeDelta.diffRelationships(sourceState, targetState),
     ];
 
     return new ChangeDelta(sourceState, targetState, changes);
@@ -55,17 +55,32 @@ export class ChangeDelta {
     return [...added, ...removed, ...modified];
   }
 
-  private static diffAddedRelationships(
+  private static diffRelationships(
     source: ProjectState,
     target: ProjectState,
   ): readonly Change[] {
-    const sourceIds = new Set(
-      source.getRelationships().map((relationship) => relationship.id),
+    const sourceRelationships = source.getRelationships();
+    const targetRelationships = target.getRelationships();
+    const sourceById = new Map(
+      sourceRelationships.map((relationship) => [relationship.id, relationship]),
     );
+    const targetIds = new Set(targetRelationships.map((relationship) => relationship.id));
 
-    return target
-      .getRelationships()
-      .filter((relationship) => !sourceIds.has(relationship.id))
+    const added = targetRelationships
+      .filter((relationship) => !sourceById.has(relationship.id))
       .map((relationship) => ({ type: ChangeType.Added, relationship }));
+
+    const removed = sourceRelationships
+      .filter((relationship) => !targetIds.has(relationship.id))
+      .map((relationship) => ({ type: ChangeType.Removed, relationship }));
+
+    const modified = targetRelationships
+      .filter((relationship) => {
+        const before = sourceById.get(relationship.id);
+        return before !== undefined && before.name !== relationship.name;
+      })
+      .map((relationship) => ({ type: ChangeType.Modified, relationship }));
+
+    return [...added, ...removed, ...modified];
   }
 }
