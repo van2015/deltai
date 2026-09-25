@@ -1,6 +1,6 @@
 import type { ProjectState } from '../project/project-state/project-state.js';
 import type { ChangeProposal } from '../change-proposal/change-proposal.js';
-import type { Change } from './change.js';
+import { Change } from './change.js';
 import { ChangeType } from './change-type.js';
 
 export class ChangeDelta {
@@ -52,18 +52,18 @@ export class ChangeDelta {
 
     const added = targetElements
       .filter((element) => !sourceById.has(element.id))
-      .map((element) => ({ type: ChangeType.Added, element }));
+      .map((element) => Change.forElement(ChangeType.Added, element));
 
     const removed = sourceElements
       .filter((element) => !targetIds.has(element.id))
-      .map((element) => ({ type: ChangeType.Removed, element }));
+      .map((element) => Change.forElement(ChangeType.Removed, element));
 
     const modified = targetElements
       .filter((element) => {
         const before = sourceById.get(element.id);
         return before !== undefined && before.name !== element.name;
       })
-      .map((element) => ({ type: ChangeType.Modified, element }));
+      .map((element) => Change.forElement(ChangeType.Modified, element));
 
     return [...added, ...removed, ...modified];
   }
@@ -81,18 +81,18 @@ export class ChangeDelta {
 
     const added = targetRelationships
       .filter((relationship) => !sourceById.has(relationship.id))
-      .map((relationship) => ({ type: ChangeType.Added, relationship }));
+      .map((relationship) => Change.forRelationship(ChangeType.Added, relationship));
 
     const removed = sourceRelationships
       .filter((relationship) => !targetIds.has(relationship.id))
-      .map((relationship) => ({ type: ChangeType.Removed, relationship }));
+      .map((relationship) => Change.forRelationship(ChangeType.Removed, relationship));
 
     const modified = targetRelationships
       .filter((relationship) => {
         const before = sourceById.get(relationship.id);
         return before !== undefined && before.name !== relationship.name;
       })
-      .map((relationship) => ({ type: ChangeType.Modified, relationship }));
+      .map((relationship) => Change.forRelationship(ChangeType.Modified, relationship));
 
     return [...added, ...removed, ...modified];
   }
@@ -102,36 +102,20 @@ export class ChangeDelta {
       return false;
     }
 
-    const counts = new Map<string, number>();
+    const unmatched = [...right];
 
     for (const change of left) {
-      const key = ChangeDelta.changeKey(change);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
+      const matchIndex = unmatched.findIndex((candidate) =>
+        change.isEquivalentTo(candidate),
+      );
 
-    for (const change of right) {
-      const key = ChangeDelta.changeKey(change);
-      const count = counts.get(key);
-
-      if (count === undefined) {
+      if (matchIndex === -1) {
         return false;
       }
 
-      if (count === 1) {
-        counts.delete(key);
-      } else {
-        counts.set(key, count - 1);
-      }
+      unmatched.splice(matchIndex, 1);
     }
 
-    return counts.size === 0;
-  }
-
-  private static changeKey(change: Change): string {
-    if ('element' in change) {
-      return `element:${change.type}:${change.element.id}:${change.element.name}`;
-    }
-
-    return `relationship:${change.type}:${change.relationship.id}:${change.relationship.name}`;
+    return unmatched.length === 0;
   }
 }

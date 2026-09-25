@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
-import type { Change } from '@/domain/change-delta/change.js';
+import { Change } from '@/domain/change-delta/change.js';
 import { ChangeDelta } from '@/domain/change-delta/change-delta.js';
 import { ChangeType } from '@/domain/change-delta/change-type.js';
 import type { Element } from '@/domain/project/project-state/element.js';
@@ -27,11 +27,8 @@ describe('ChangeDelta', () => {
 
     const delta = ChangeDelta.between(sourceState, targetState);
 
-    expect(delta.changes).toEqual([{ type: ChangeType.Added, element: newElement }]);
-    expect(delta.changes).toContainEqual({
-      type: ChangeType.Added,
-      element: expect.objectContaining({ id: newElement.id }),
-    });
+    expect(delta.changes).toEqual([Change.forElement(ChangeType.Added, newElement)]);
+    expect(delta.changes[0]?.element?.id).toBe(newElement.id);
   });
 
   it('contains a removed element when the target state no longer contains an element', () => {
@@ -41,11 +38,8 @@ describe('ChangeDelta', () => {
 
     const delta = ChangeDelta.between(sourceState, targetState);
 
-    expect(delta.changes).toEqual([{ type: ChangeType.Removed, element: removedElement }]);
-    expect(delta.changes).toContainEqual({
-      type: ChangeType.Removed,
-      element: expect.objectContaining({ id: removedElement.id }),
-    });
+    expect(delta.changes).toEqual([Change.forElement(ChangeType.Removed, removedElement)]);
+    expect(delta.changes[0]?.element?.id).toBe(removedElement.id);
   });
 
   it('contains a modified element when an element changes', () => {
@@ -56,15 +50,13 @@ describe('ChangeDelta', () => {
 
     const delta = ChangeDelta.between(sourceState, targetState);
 
-    expect(delta.changes).toEqual([{ type: ChangeType.Modified, element: after }]);
-    expect(delta.changes).not.toContainEqual({
-      type: ChangeType.Added,
-      element: after,
-    });
-    expect(delta.changes).not.toContainEqual({
-      type: ChangeType.Removed,
-      element: before,
-    });
+    expect(delta.changes).toEqual([Change.forElement(ChangeType.Modified, after)]);
+    expect(delta.changes[0]?.isEquivalentTo(Change.forElement(ChangeType.Added, after))).toBe(
+      false,
+    );
+    expect(
+      delta.changes[0]?.isEquivalentTo(Change.forElement(ChangeType.Removed, before)),
+    ).toBe(false);
   });
 
   it('contains an added relationship when the target state contains a new relationship', () => {
@@ -77,7 +69,7 @@ describe('ChangeDelta', () => {
     const delta = ChangeDelta.between(sourceState, targetState);
 
     expect(delta.changes).toEqual([
-      { type: ChangeType.Added, relationship: newRelationship },
+      Change.forRelationship(ChangeType.Added, newRelationship),
     ]);
   });
 
@@ -105,10 +97,11 @@ describe('ChangeDelta', () => {
 
     const delta = ChangeDelta.between(sourceState, targetState);
 
-    expect(delta.changes).not.toContainEqual({
-      type: ChangeType.Modified,
-      element,
-    });
+    expect(
+      delta.changes.some((change) =>
+        change.isEquivalentTo(Change.forElement(ChangeType.Modified, element)),
+      ),
+    ).toBe(false);
   });
 
   it('contains a removed relationship when the target state no longer contains a relationship', () => {
@@ -120,7 +113,9 @@ describe('ChangeDelta', () => {
 
     const delta = ChangeDelta.between(sourceState, targetState);
 
-    expect(delta.changes).toEqual([{ type: ChangeType.Removed, relationship }]);
+    expect(delta.changes).toEqual([
+      Change.forRelationship(ChangeType.Removed, relationship),
+    ]);
   });
 
   it('contains a modified relationship when a relationship changes', () => {
@@ -131,7 +126,9 @@ describe('ChangeDelta', () => {
 
     const delta = ChangeDelta.between(sourceState, targetState);
 
-    expect(delta.changes).toEqual([{ type: ChangeType.Modified, relationship: after }]);
+    expect(delta.changes).toEqual([
+      Change.forRelationship(ChangeType.Modified, after),
+    ]);
   });
 
   it('does not modify either state', () => {
@@ -169,8 +166,8 @@ describe('ChangeDelta', () => {
     const delta = ChangeDelta.between(sourceState, targetState);
 
     expect(delta.changes).toEqual([
-      { type: ChangeType.Added, element: targetElement },
-      { type: ChangeType.Removed, element: sourceElement },
+      Change.forElement(ChangeType.Added, targetElement),
+      Change.forElement(ChangeType.Removed, sourceElement),
     ]);
   });
 
@@ -234,10 +231,9 @@ describe('ChangeDelta', () => {
     const delta = ChangeDelta.from(proposal);
     const changes = delta.changes as Change[];
 
-    changes.push({
-      type: ChangeType.Added,
-      element: { id: 'Customer', name: 'Customer' },
-    });
+    changes.push(
+      Change.forElement(ChangeType.Added, { id: 'Customer', name: 'Customer' }),
+    );
 
     const rebuiltDelta = ChangeDelta.from(proposal);
 
