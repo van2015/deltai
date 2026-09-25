@@ -20,6 +20,16 @@ describe('ChangeDelta', () => {
     expect(delta.targetState).toBe(targetState);
   });
 
+  it('produces an empty delta when diffing a state with itself', () => {
+    const state = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+
+    const delta = ChangeDelta.between(state, state);
+
+    expect(delta.changes).toEqual([]);
+  });
+
   it('contains an added element when the target state contains a new element', () => {
     const newElement: Element = { id: 'Order', name: 'Order' };
     const sourceState = ProjectStateBuilder.aState().build();
@@ -155,6 +165,42 @@ describe('ChangeDelta', () => {
 
     expect(sourceState.hasSameModelAs(sourceBefore)).toBe(true);
     expect(targetState.hasSameModelAs(targetBefore)).toBe(true);
+  });
+
+  it('can reconstruct the target state by applying its changes to the source', () => {
+    const sourceState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .withRelationship({ id: 'Order->Customer', name: 'depends' })
+      .build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'PurchaseOrder' })
+      .withElement({ id: 'Customer', name: 'Customer' })
+      .withRelationship({ id: 'Order->Customer', name: 'owns' })
+      .build();
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    const reconstructedState = delta.applyTo(sourceState);
+
+    expect(reconstructedState.hasSameModelAs(targetState)).toBe(true);
+  });
+
+  it('contains only elements and relationships from the compared states', () => {
+    const sourceElement: Element = { id: 'Order', name: 'Order' };
+    const targetRelationship: Relationship = { id: 'Order->Customer', name: 'depends' };
+    const sourceState = ProjectStateBuilder.aState().withElement(sourceElement).build();
+    const targetState = ProjectStateBuilder.aState()
+      .withRelationship(targetRelationship)
+      .build();
+    const delta = ChangeDelta.between(sourceState, targetState);
+    const knownIds = new Set([
+      sourceElement.id,
+      targetRelationship.id,
+    ]);
+
+    for (const change of delta.changes) {
+      const changedId = change.element?.id ?? change.relationship?.id;
+      expect(changedId !== undefined && knownIds.has(changedId)).toBe(true);
+    }
   });
 
   it('treats different elements with identical content as separate elements', () => {

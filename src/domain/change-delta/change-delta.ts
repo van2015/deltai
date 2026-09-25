@@ -1,5 +1,7 @@
-import type { ProjectState } from '../project/project-state/project-state.js';
+import { ProjectState } from '../project/project-state/project-state.js';
+import type { Element } from '../project/project-state/element.js';
 import type { ChangeProposal } from '../change-proposal/change-proposal.js';
+import type { Relationship } from '../project/project-state/relationship.js';
 import { Change } from './change.js';
 import { ChangeType } from './change-type.js';
 
@@ -33,6 +35,21 @@ export class ChangeDelta {
 
   get changes(): readonly Change[] {
     return [...this.changeList];
+  }
+
+  applyTo(sourceState: ProjectState): ProjectState {
+    const elements = [...sourceState.getElements()];
+    const relationships = [...sourceState.getRelationships()];
+
+    for (const change of this.changeList) {
+      if (change.element !== undefined) {
+        ChangeDelta.applyElementChange(elements, change);
+      } else if (change.relationship !== undefined) {
+        ChangeDelta.applyRelationshipChange(relationships, change);
+      }
+    }
+
+    return ProjectState.create(sourceState.projectId, { elements, relationships });
   }
 
   isEquivalentTo(otherDelta: ChangeDelta): boolean {
@@ -117,5 +134,60 @@ export class ChangeDelta {
     }
 
     return unmatched.length === 0;
+  }
+
+  private static applyElementChange(elements: Element[], change: Change): void {
+    const element = change.element;
+
+    if (element === undefined) {
+      return;
+    }
+
+    if (change.type === ChangeType.Added) {
+      elements.push(element);
+      return;
+    }
+
+    const index = elements.findIndex((candidate) => candidate.id === element.id);
+
+    if (index === -1) {
+      return;
+    }
+
+    if (change.type === ChangeType.Removed) {
+      elements.splice(index, 1);
+      return;
+    }
+
+    elements[index] = element;
+  }
+
+  private static applyRelationshipChange(
+    relationships: Relationship[],
+    change: Change,
+  ): void {
+    const relationship = change.relationship;
+
+    if (relationship === undefined) {
+      return;
+    }
+
+    if (change.type === ChangeType.Added) {
+      relationships.push(relationship);
+      return;
+    }
+
+    const index = relationships.findIndex((candidate) => candidate.id === relationship.id);
+
+    if (index === -1) {
+      return;
+    }
+
+    if (change.type === ChangeType.Removed) {
+      relationships.splice(index, 1);
+      return;
+    }
+
+    relationships[index] = relationship;
   }
 }
