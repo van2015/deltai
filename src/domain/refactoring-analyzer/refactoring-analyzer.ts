@@ -2,6 +2,7 @@ import { InvalidLlmResponseError } from './invalid-llm-response-error.js';
 import { CodeLocation } from './code-location.js';
 import type { LlmClient } from './llm-client.js';
 import { RefactoringProposal } from './refactoring-proposal.js';
+import type { RefactoringAnalysisContext } from './refactoring-analysis-context.js';
 import type { SourceCode } from './source-code.js';
 
 export class RefactoringAnalyzer {
@@ -61,7 +62,18 @@ export class RefactoringAnalyzer {
 
   constructor(private readonly llm: LlmClient) {}
 
-  private buildPrompt(sourceCode: SourceCode): string {
+  private buildPrompt(
+    sourceCode: SourceCode,
+    context: RefactoringAnalysisContext | undefined,
+  ): string {
+    const projectContext = context === undefined
+      ? 'No project state was provided.'
+      : JSON.stringify({
+          elements: context.projectState.getElements(),
+          relationships: context.projectState.getRelationships(),
+        });
+    const userIntent = context?.userIntent ?? 'No additional user intent was provided.';
+
     return [
       'You are a refactoring analyzer.',
       'Identify refactoring opportunities in the source code below.',
@@ -72,13 +84,22 @@ export class RefactoringAnalyzer {
       '- "target": an object with "path" and "method" identifying the code',
       'If there are no opportunities, respond with an empty array [].',
       '',
+      'Project state:',
+      projectContext,
+      '',
+      'User intent:',
+      userIntent,
+      '',
       'Source code:',
       sourceCode.content,
     ].join('\n');
   }
 
-  analyze(sourceCode: SourceCode): readonly RefactoringProposal[] {
-    const response = this.llm.complete(this.buildPrompt(sourceCode));
+  analyze(
+    sourceCode: SourceCode,
+    context?: RefactoringAnalysisContext,
+  ): readonly RefactoringProposal[] {
+    const response = this.llm.complete(this.buildPrompt(sourceCode, context));
 
     return RefactoringAnalyzer.parseProposals(response);
   }
