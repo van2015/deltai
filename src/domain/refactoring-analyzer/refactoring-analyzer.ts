@@ -1,4 +1,5 @@
 import { InvalidLlmResponseError } from './invalid-llm-response-error.js';
+import { CodeLocation } from './code-location.js';
 import type { LlmClient } from './llm-client.js';
 import { RefactoringProposal } from './refactoring-proposal.js';
 import type { SourceCode } from './source-code.js';
@@ -28,16 +29,16 @@ export class RefactoringAnalyzer {
     const proposal = value as Record<string, unknown>;
     const target = proposal.target;
 
-    if (typeof proposal.kind !== 'string') {
-      throw new InvalidLlmResponseError('proposal is missing "kind"');
+    if (typeof proposal.type !== 'string') {
+      throw new InvalidLlmResponseError('proposal is missing "type"');
     }
 
-    if (typeof proposal.suggestion !== 'string') {
-      throw new InvalidLlmResponseError('proposal is missing "suggestion"');
+    if (typeof proposal.description !== 'string') {
+      throw new InvalidLlmResponseError('proposal is missing "description"');
     }
 
-    if (typeof proposal.reason !== 'string') {
-      throw new InvalidLlmResponseError('proposal is missing "reason"');
+    if (typeof proposal.rationale !== 'string') {
+      throw new InvalidLlmResponseError('proposal is missing "rationale"');
     }
 
     if (typeof target !== 'object' || target === null) {
@@ -51,10 +52,10 @@ export class RefactoringAnalyzer {
     }
 
     return RefactoringProposal.of({
-      kind: proposal.kind,
-      suggestion: proposal.suggestion,
-      reason: proposal.reason,
-      target: { path: targetFields.path, method: targetFields.method },
+      type: proposal.type,
+      description: proposal.description,
+      rationale: proposal.rationale,
+      target: CodeLocation.of(targetFields.path, targetFields.method),
     });
   }
 
@@ -65,9 +66,9 @@ export class RefactoringAnalyzer {
       'You are a refactoring analyzer.',
       'Identify refactoring opportunities in the source code below.',
       'Respond ONLY with a JSON array. Each element must be an object with:',
-      '- "kind": the detected code smell (e.g. "long-method")',
-      '- "suggestion": the suggested refactoring (e.g. "extract-method")',
-      '- "reason": why this refactoring is suggested',
+      '- "type": the refactoring type (e.g. "long-method")',
+      '- "description": the suggested refactoring (e.g. "extract-method")',
+      '- "rationale": why this refactoring is suggested',
       '- "target": an object with "path" and "method" identifying the code',
       'If there are no opportunities, respond with an empty array [].',
       '',

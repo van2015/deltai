@@ -21,9 +21,9 @@ describe('RefactoringAnalyzer', () => {
     const llm = new MockLlm(
       JSON.stringify([
         {
-          kind: 'long-method',
-          suggestion: 'extract-method',
-          reason: 'processOrder exceeds 50 lines',
+          type: 'long-method',
+          description: 'extract-method',
+          rationale: 'processOrder exceeds 50 lines',
           target: { path: 'src/order.ts', method: 'processOrder' },
         },
       ]),
@@ -36,16 +36,16 @@ describe('RefactoringAnalyzer', () => {
     const proposals = analyzer.analyze(sourceCode);
 
     expect(proposals).toHaveLength(1);
-    expect(proposals[0]?.kind).toBe('long-method');
+    expect(proposals[0]?.type).toBe('long-method');
   });
 
   it('should_suggest_extract_method_for_long_method', () => {
     const llm = new MockLlm(
       JSON.stringify([
         {
-          kind: 'long-method',
-          suggestion: 'extract-method',
-          reason: 'processOrder exceeds 50 lines',
+          type: 'long-method',
+          description: 'extract-method',
+          rationale: 'processOrder exceeds 50 lines',
           target: { path: 'src/order.ts', method: 'processOrder' },
         },
       ]),
@@ -55,23 +55,23 @@ describe('RefactoringAnalyzer', () => {
 
     const proposals = analyzer.analyze(sourceCode);
 
-    expect(proposals[0]?.kind).toBe('long-method');
-    expect(proposals[0]?.suggestion).toBe('extract-method');
+    expect(proposals[0]?.type).toBe('long-method');
+    expect(proposals[0]?.description).toBe('extract-method');
   });
 
   it('should_include_reason_for_each_proposal', () => {
     const llm = new MockLlm(
       JSON.stringify([
         {
-          kind: 'long-method',
-          suggestion: 'extract-method',
-          reason: 'processOrder exceeds 50 lines',
+          type: 'long-method',
+          description: 'extract-method',
+          rationale: 'processOrder exceeds 50 lines',
           target: { path: 'src/order.ts', method: 'processOrder' },
         },
         {
-          kind: 'long-method',
-          suggestion: 'extract-method',
-          reason: 'validateInput exceeds 50 lines',
+          type: 'long-method',
+          description: 'extract-method',
+          rationale: 'validateInput exceeds 50 lines',
           target: { path: 'src/input.ts', method: 'validateInput' },
         },
       ]),
@@ -85,7 +85,7 @@ describe('RefactoringAnalyzer', () => {
 
     expect(proposals).toHaveLength(2);
     for (const proposal of proposals) {
-      expect(proposal.reason).not.toBe('');
+      expect(proposal.rationale).not.toBe('');
     }
   });
 
@@ -93,9 +93,9 @@ describe('RefactoringAnalyzer', () => {
     const llm = new MockLlm(
       JSON.stringify([
         {
-          kind: 'long-method',
-          suggestion: 'extract-method',
-          reason: 'processOrder exceeds 50 lines',
+          type: 'long-method',
+          description: 'extract-method',
+          rationale: 'processOrder exceeds 50 lines',
           target: { path: 'src/order.ts', method: 'processOrder' },
         },
       ]),
@@ -113,9 +113,9 @@ describe('RefactoringAnalyzer', () => {
     const llm = new MockLlm(
       JSON.stringify([
         {
-          kind: 'long-method',
-          suggestion: 'extract-method',
-          reason: 'processOrder exceeds 50 lines',
+          type: 'long-method',
+          description: 'extract-method',
+          rationale: 'processOrder exceeds 50 lines',
           target: { path: 'src/order.ts', method: 'processOrder' },
         },
       ]),
@@ -134,9 +134,9 @@ describe('RefactoringAnalyzer', () => {
     expect(() => {
       (proposal as unknown as { id: string }).id = 'replaced';
     }).toThrow();
-    expect(proposal?.kind).toBe('long-method');
-    expect(proposal?.suggestion).toBe('extract-method');
-    expect(proposal?.reason).not.toBe('');
+    expect(proposal?.type).toBe('long-method');
+    expect(proposal?.description).toBe('extract-method');
+    expect(proposal?.rationale).not.toBe('');
     expect(proposal?.target.method).toBe('processOrder');
   });
 
@@ -149,7 +149,7 @@ describe('RefactoringAnalyzer', () => {
   });
 
   it('fails when a proposal is missing required fields', () => {
-    const llm = new MockLlm(JSON.stringify([{ kind: 'long-method' }]));
+    const llm = new MockLlm(JSON.stringify([{ type: 'long-method' }]));
     const analyzer = new RefactoringAnalyzer(llm);
     const sourceCode = SourceCode.of('function processOrder() {}');
 

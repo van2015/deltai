@@ -1,25 +1,33 @@
 import { randomUUID } from 'node:crypto';
 
-export interface CodeTarget {
-  readonly path: string;
-  readonly method: string;
-}
+import type { CodeLocation } from './code-location.js';
+import type { RefactoringType } from './refactoring-type.js';
 
 export interface RefactoringProposalInput {
-  readonly kind: string;
-  readonly suggestion: string;
-  readonly reason: string;
-  readonly target: CodeTarget;
+  readonly type: RefactoringType;
+  readonly description: string;
+  readonly rationale: string;
+  readonly target: CodeLocation;
 }
 
 export class RefactoringProposal {
+  private constructor(
+    private readonly proposalId: string,
+    private readonly proposalType: RefactoringType,
+    private readonly proposalDescription: string,
+    private readonly proposalRationale: string,
+    private readonly proposalTarget: CodeLocation,
+  ) {
+    Object.freeze(this);
+  }
+
   static of(input: RefactoringProposalInput): RefactoringProposal {
     return new RefactoringProposal(
       randomUUID(),
-      input.kind,
-      input.suggestion,
-      input.reason,
-      { ...input.target },
+      input.type,
+      input.description,
+      input.rationale,
+      input.target,
     );
   }
 
@@ -27,30 +35,19 @@ export class RefactoringProposal {
     return this.proposalId;
   }
 
-  get kind(): string {
-    return this.proposalKind;
+  get type(): RefactoringType {
+    return this.proposalType;
   }
 
-  get reason(): string {
-    return this.proposalReason;
+  get description(): string {
+    return this.proposalDescription;
   }
 
-  get suggestion(): string {
-    return this.proposalSuggestion;
+  get rationale(): string {
+    return this.proposalRationale;
   }
 
-  get target(): CodeTarget {
+  get target(): CodeLocation {
     return this.proposalTarget;
-  }
-
-  private constructor(
-    private readonly proposalId: string,
-    private readonly proposalKind: string,
-    private readonly proposalSuggestion: string,
-    private readonly proposalReason: string,
-    private readonly proposalTarget: CodeTarget,
-  ) {
-    Object.freeze(this.proposalTarget);
-    Object.freeze(this);
   }
 }
