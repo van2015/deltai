@@ -17,36 +17,13 @@ import { Selection } from './selection.js';
 import { ViewContextSubmittedError } from './view-context-submitted-error.js';
 
 export class ViewContext {
-  private selectedElements: Selection = Selection.empty();
-  private annotationList: Annotation[] = [];
-  private rejectedChangeList: RejectedChange[] = [];
-
-  private constructor(
-    private readonly contextId: ViewContextId,
-    private readonly state: ProjectState | undefined,
-    private readonly associatedDelta: ChangeDelta | undefined,
-    private submitted = false,
-  ) {}
-
   static create(projectState?: ProjectState, delta?: ChangeDelta): ViewContext {
     return new ViewContext(randomUUID(), projectState, delta);
   }
 
-  get id(): ViewContextId {
-    return this.contextId;
-  }
-
-  get projectState(): ProjectState | undefined {
-    return this.state;
-  }
-
-  get isSubmitted(): boolean {
-    return this.submitted;
-  }
-
-  get selection(): Selection {
-    return this.selectedElements;
-  }
+  private annotationList: Annotation[] = [];
+  private rejectedChangeList: RejectedChange[] = [];
+  private selectedElements: Selection = Selection.empty();
 
   get annotations(): readonly Annotation[] {
     return [...this.annotationList];
@@ -56,31 +33,56 @@ export class ViewContext {
     return this.associatedDelta;
   }
 
+  get id(): ViewContextId {
+    return this.contextId;
+  }
+
+  get isSubmitted(): boolean {
+    return this.submitted;
+  }
+
+  get projectState(): ProjectState | undefined {
+    return this.state;
+  }
+
   get rejectedChanges(): readonly RejectedChange[] {
     return [...this.rejectedChangeList];
   }
 
-  select(elementId: string): void {
-    this.ensureNotSubmitted();
-
-    const element = this.ensureElementExists(elementId);
-
-    if (this.selectedElements.contains(elementId)) {
-      return;
-    }
-
-    this.selectedElements = Selection.of([
-      ...this.selectedElements.getElements(),
-      element,
-    ]);
+  get selection(): Selection {
+    return this.selectedElements;
   }
 
-  deselect(elementId: string): void {
+  private constructor(
+    private readonly contextId: ViewContextId,
+    private readonly state: ProjectState | undefined,
+    private readonly associatedDelta: ChangeDelta | undefined,
+    private submitted = false,
+  ) {}
+
+  private ensureElementExists(elementId: string): Element {
+    const element = this.state?.getElements().find((candidate) => candidate.id === elementId);
+
+    if (element === undefined) {
+      throw new ElementNotInStateError(elementId);
+    }
+
+    return element;
+  }
+
+  private ensureNotSubmitted(): void {
+    if (this.submitted) {
+      throw new ViewContextSubmittedError();
+    }
+  }
+
+  annotate(text: string): Annotation {
     this.ensureNotSubmitted();
 
-    this.selectedElements = Selection.of(
-      this.selectedElements.getElements().filter((element) => element.id !== elementId),
-    );
+    const annotation = Annotation.freeText(text);
+    this.annotationList.push(annotation);
+
+    return annotation;
   }
 
   annotateElement(elementId: string, text: string): Annotation {
@@ -110,27 +112,12 @@ export class ViewContext {
     return annotation;
   }
 
-  annotate(text: string): Annotation {
+  deselect(elementId: string): void {
     this.ensureNotSubmitted();
 
-    const annotation = Annotation.freeText(text);
-    this.annotationList.push(annotation);
-
-    return annotation;
-  }
-
-  removeAnnotation(annotationId: AnnotationId): void {
-    this.ensureNotSubmitted();
-
-    const index = this.annotationList.findIndex(
-      (annotation) => annotation.id === annotationId,
+    this.selectedElements = Selection.of(
+      this.selectedElements.getElements().filter((element) => element.id !== elementId),
     );
-
-    if (index === -1) {
-      throw new AnnotationNotFoundError(annotationId);
-    }
-
-    this.annotationList.splice(index, 1);
   }
 
   rejectChange(change: Change): RejectedChange {
@@ -158,6 +145,35 @@ export class ViewContext {
     return rejected;
   }
 
+  removeAnnotation(annotationId: AnnotationId): void {
+    this.ensureNotSubmitted();
+
+    const index = this.annotationList.findIndex(
+      (annotation) => annotation.id === annotationId,
+    );
+
+    if (index === -1) {
+      throw new AnnotationNotFoundError(annotationId);
+    }
+
+    this.annotationList.splice(index, 1);
+  }
+
+  select(elementId: string): void {
+    this.ensureNotSubmitted();
+
+    const element = this.ensureElementExists(elementId);
+
+    if (this.selectedElements.contains(elementId)) {
+      return;
+    }
+
+    this.selectedElements = Selection.of([
+      ...this.selectedElements.getElements(),
+      element,
+    ]);
+  }
+
   submit(): void {
     if (this.submitted) {
       return;
@@ -165,21 +181,5 @@ export class ViewContext {
 
     this.submitted = true;
     Object.freeze(this);
-  }
-
-  private ensureNotSubmitted(): void {
-    if (this.submitted) {
-      throw new ViewContextSubmittedError();
-    }
-  }
-
-  private ensureElementExists(elementId: string): Element {
-    const element = this.state?.getElements().find((candidate) => candidate.id === elementId);
-
-    if (element === undefined) {
-      throw new ElementNotInStateError(elementId);
-    }
-
-    return element;
   }
 }

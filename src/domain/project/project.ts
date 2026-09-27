@@ -5,8 +5,6 @@ import { ProposalNotAcceptedError } from './proposal-not-accepted-error.js';
 import { SourceStateMismatchError } from './source-state-mismatch-error.js';
 
 export class Project {
-  private constructor(private state: ProjectState) {}
-
   static create(initialState: ProjectState): Project {
     return new Project(initialState);
   }
@@ -14,6 +12,8 @@ export class Project {
   get currentState(): ProjectState {
     return this.state;
   }
+
+  private constructor(private state: ProjectState) {}
 
   apply(
     proposal: ChangeProposal,

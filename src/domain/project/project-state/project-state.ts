@@ -7,45 +7,6 @@ import type { ProjectStateId } from './project-state-id.js';
 import type { Relationship } from './relationship.js';
 
 export class ProjectState {
-  private constructor(
-    private readonly stateId: ProjectStateId,
-    private readonly project: ProjectId,
-    private readonly projectModel: ProjectModel,
-  ) {}
-
-  static create(projectId: ProjectId, model: ProjectModel): ProjectState {
-    return new ProjectState(randomUUID(), projectId, model);
-  }
-
-  get id(): ProjectStateId {
-    return this.stateId;
-  }
-
-  get projectId(): ProjectId {
-    return this.project;
-  }
-
-  getElements(): readonly Element[] {
-    return this.projectModel.elements.map((element) => ({ ...element }));
-  }
-
-  getRelationships(): readonly Relationship[] {
-    return this.projectModel.relationships.map((relationship) => ({ ...relationship }));
-  }
-
-  hasSameModelAs(otherState: ProjectState): boolean {
-    return (
-      ProjectState.sameElements(
-        this.projectModel.elements,
-        otherState.projectModel.elements,
-      ) &&
-      ProjectState.sameRelationships(
-        this.projectModel.relationships,
-        otherState.projectModel.relationships,
-      )
-    );
-  }
-
   private static sameElements(left: readonly Element[], right: readonly Element[]): boolean {
     if (left.length !== right.length) {
       return false;
@@ -69,5 +30,44 @@ export class ProjectState {
       const other = right.find((candidate) => candidate.id === relationship.id);
       return other !== undefined && other.name === relationship.name;
     });
+  }
+
+  static create(projectId: ProjectId, model: ProjectModel): ProjectState {
+    return new ProjectState(randomUUID(), projectId, model);
+  }
+
+  get id(): ProjectStateId {
+    return this.stateId;
+  }
+
+  get projectId(): ProjectId {
+    return this.project;
+  }
+
+  private constructor(
+    private readonly stateId: ProjectStateId,
+    private readonly project: ProjectId,
+    private readonly projectModel: ProjectModel,
+  ) {}
+
+  getElements(): readonly Element[] {
+    return this.projectModel.elements.map((element) => ({ ...element }));
+  }
+
+  getRelationships(): readonly Relationship[] {
+    return this.projectModel.relationships.map((relationship) => ({ ...relationship }));
+  }
+
+  hasSameModelAs(otherState: ProjectState): boolean {
+    return (
+      ProjectState.sameElements(
+        this.projectModel.elements,
+        otherState.projectModel.elements,
+      ) &&
+      ProjectState.sameRelationships(
+        this.projectModel.relationships,
+        otherState.projectModel.relationships,
+      )
+    );
   }
 }

@@ -7,12 +7,6 @@ import { MismatchedProjectError } from './mismatched-project-error.js';
 import { ProposalStatus } from './proposal-status.js';
 
 export class ChangeProposal {
-  private constructor(
-    private readonly source: ProjectState,
-    private readonly target: ProjectState,
-    private proposalStatus: ProposalStatus,
-  ) {}
-
   static create(sourceState: ProjectState, targetState: ProjectState): ChangeProposal {
     if (sourceState === undefined) {
       throw new MissingSourceStateError();
@@ -33,12 +27,42 @@ export class ChangeProposal {
     return this.source;
   }
 
+  get status(): ProposalStatus {
+    return this.proposalStatus;
+  }
+
   get targetState(): ProjectState {
     return this.target;
   }
 
-  get status(): ProposalStatus {
-    return this.proposalStatus;
+  private constructor(
+    private readonly source: ProjectState,
+    private readonly target: ProjectState,
+    private proposalStatus: ProposalStatus,
+  ) {}
+
+  private transitionTo(next: ProposalStatus, allowedFrom: ProposalStatus): void {
+    if (this.proposalStatus !== allowedFrom) {
+      throw new InvalidProposalTransitionError(this.proposalStatus, next);
+    }
+
+    this.proposalStatus = next;
+  }
+
+  abandon(): void {
+    this.transitionTo(ProposalStatus.Rejected, ProposalStatus.ApplicationFailed);
+  }
+
+  accept(): void {
+    this.transitionTo(ProposalStatus.Accepted, ProposalStatus.UnderReview);
+  }
+
+  apply(): void {
+    this.transitionTo(ProposalStatus.Applying, ProposalStatus.Accepted);
+  }
+
+  fail(): void {
+    this.transitionTo(ProposalStatus.ApplicationFailed, ProposalStatus.Applying);
   }
 
   hasNoChanges(): boolean {
@@ -49,47 +73,23 @@ export class ChangeProposal {
     return this.sourceState !== project.currentState;
   }
 
-  review(): void {
-    this.transitionTo(ProposalStatus.UnderReview, ProposalStatus.Generated);
-  }
-
-  accept(): void {
-    this.transitionTo(ProposalStatus.Accepted, ProposalStatus.UnderReview);
-  }
-
   reject(): void {
     this.transitionTo(ProposalStatus.Rejected, ProposalStatus.UnderReview);
-  }
-
-  supersede(): void {
-    this.transitionTo(ProposalStatus.Superseded, ProposalStatus.UnderReview);
-  }
-
-  apply(): void {
-    this.transitionTo(ProposalStatus.Applying, ProposalStatus.Accepted);
-  }
-
-  succeed(): void {
-    this.transitionTo(ProposalStatus.Applied, ProposalStatus.Applying);
-  }
-
-  fail(): void {
-    this.transitionTo(ProposalStatus.ApplicationFailed, ProposalStatus.Applying);
   }
 
   retry(): void {
     this.transitionTo(ProposalStatus.Applying, ProposalStatus.ApplicationFailed);
   }
 
-  abandon(): void {
-    this.transitionTo(ProposalStatus.Rejected, ProposalStatus.ApplicationFailed);
+  review(): void {
+    this.transitionTo(ProposalStatus.UnderReview, ProposalStatus.Generated);
   }
 
-  private transitionTo(next: ProposalStatus, allowedFrom: ProposalStatus): void {
-    if (this.proposalStatus !== allowedFrom) {
-      throw new InvalidProposalTransitionError(this.proposalStatus, next);
-    }
+  succeed(): void {
+    this.transitionTo(ProposalStatus.Applied, ProposalStatus.Applying);
+  }
 
-    this.proposalStatus = next;
+  supersede(): void {
+    this.transitionTo(ProposalStatus.Superseded, ProposalStatus.UnderReview);
   }
 }

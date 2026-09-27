@@ -6,62 +6,59 @@ import { Change } from './change.js';
 import { ChangeType } from './change-type.js';
 
 export class ChangeDelta {
-  private constructor(
-    private readonly source: ProjectState,
-    private readonly target: ProjectState,
-    private readonly changeList: readonly Change[],
-  ) {}
+  private static applyElementChange(elements: Element[], change: Change): void {
+    const element = change.element;
 
-  static between(sourceState: ProjectState, targetState: ProjectState): ChangeDelta {
-    const changes = [
-      ...ChangeDelta.diffElements(sourceState, targetState),
-      ...ChangeDelta.diffRelationships(sourceState, targetState),
-    ];
-
-    return new ChangeDelta(sourceState, targetState, changes);
-  }
-
-  static from(proposal: ChangeProposal): ChangeDelta {
-    return ChangeDelta.between(proposal.sourceState, proposal.targetState);
-  }
-
-  get sourceState(): ProjectState {
-    return this.source;
-  }
-
-  get targetState(): ProjectState {
-    return this.target;
-  }
-
-  get changes(): readonly Change[] {
-    return [...this.changeList];
-  }
-
-  applyTo(sourceState: ProjectState): ProjectState {
-    const elements = [...sourceState.getElements()];
-    const relationships = [...sourceState.getRelationships()];
-
-    for (const change of this.changeList) {
-      if (change.element !== undefined) {
-        ChangeDelta.applyElementChange(elements, change);
-      } else if (change.relationship !== undefined) {
-        ChangeDelta.applyRelationshipChange(relationships, change);
-      }
+    if (element === undefined) {
+      return;
     }
 
-    return ProjectState.create(sourceState.projectId, { elements, relationships });
+    if (change.type === ChangeType.Added) {
+      elements.push(element);
+      return;
+    }
+
+    const index = elements.findIndex((candidate) => candidate.id === element.id);
+
+    if (index === -1) {
+      return;
+    }
+
+    if (change.type === ChangeType.Removed) {
+      elements.splice(index, 1);
+      return;
+    }
+
+    elements[index] = element;
   }
 
-  isEquivalentTo(otherDelta: ChangeDelta): boolean {
-    return (
-      this.sourceState.id === otherDelta.sourceState.id &&
-      this.targetState.id === otherDelta.targetState.id &&
-      ChangeDelta.sameChanges(this.changeList, otherDelta.changeList)
-    );
-  }
+  private static applyRelationshipChange(
+    relationships: Relationship[],
+    change: Change,
+  ): void {
+    const relationship = change.relationship;
 
-  contains(change: Change): boolean {
-    return this.changeList.some((candidate) => candidate.isEquivalentTo(change));
+    if (relationship === undefined) {
+      return;
+    }
+
+    if (change.type === ChangeType.Added) {
+      relationships.push(relationship);
+      return;
+    }
+
+    const index = relationships.findIndex((candidate) => candidate.id === relationship.id);
+
+    if (index === -1) {
+      return;
+    }
+
+    if (change.type === ChangeType.Removed) {
+      relationships.splice(index, 1);
+      return;
+    }
+
+    relationships[index] = relationship;
   }
 
   private static diffElements(source: ProjectState, target: ProjectState): readonly Change[] {
@@ -140,58 +137,61 @@ export class ChangeDelta {
     return unmatched.length === 0;
   }
 
-  private static applyElementChange(elements: Element[], change: Change): void {
-    const element = change.element;
+  static between(sourceState: ProjectState, targetState: ProjectState): ChangeDelta {
+    const changes = [
+      ...ChangeDelta.diffElements(sourceState, targetState),
+      ...ChangeDelta.diffRelationships(sourceState, targetState),
+    ];
 
-    if (element === undefined) {
-      return;
-    }
-
-    if (change.type === ChangeType.Added) {
-      elements.push(element);
-      return;
-    }
-
-    const index = elements.findIndex((candidate) => candidate.id === element.id);
-
-    if (index === -1) {
-      return;
-    }
-
-    if (change.type === ChangeType.Removed) {
-      elements.splice(index, 1);
-      return;
-    }
-
-    elements[index] = element;
+    return new ChangeDelta(sourceState, targetState, changes);
   }
 
-  private static applyRelationshipChange(
-    relationships: Relationship[],
-    change: Change,
-  ): void {
-    const relationship = change.relationship;
+  static from(proposal: ChangeProposal): ChangeDelta {
+    return ChangeDelta.between(proposal.sourceState, proposal.targetState);
+  }
 
-    if (relationship === undefined) {
-      return;
+  get changes(): readonly Change[] {
+    return [...this.changeList];
+  }
+
+  get sourceState(): ProjectState {
+    return this.source;
+  }
+
+  get targetState(): ProjectState {
+    return this.target;
+  }
+
+  private constructor(
+    private readonly source: ProjectState,
+    private readonly target: ProjectState,
+    private readonly changeList: readonly Change[],
+  ) {}
+
+  applyTo(sourceState: ProjectState): ProjectState {
+    const elements = [...sourceState.getElements()];
+    const relationships = [...sourceState.getRelationships()];
+
+    for (const change of this.changeList) {
+      if (change.element !== undefined) {
+        ChangeDelta.applyElementChange(elements, change);
+      } else if (change.relationship !== undefined) {
+        ChangeDelta.applyRelationshipChange(relationships, change);
+      }
     }
 
-    if (change.type === ChangeType.Added) {
-      relationships.push(relationship);
-      return;
-    }
+    return ProjectState.create(sourceState.projectId, { elements, relationships });
+  }
 
-    const index = relationships.findIndex((candidate) => candidate.id === relationship.id);
+  contains(change: Change): boolean {
+    return this.changeList.some((candidate) => candidate.isEquivalentTo(change));
+  }
 
-    if (index === -1) {
-      return;
-    }
-
-    if (change.type === ChangeType.Removed) {
-      relationships.splice(index, 1);
-      return;
-    }
-
-    relationships[index] = relationship;
+  isEquivalentTo(otherDelta: ChangeDelta): boolean {
+    return (
+      this.sourceState.id === otherDelta.sourceState.id &&
+      this.targetState.id === otherDelta.targetState.id &&
+      ChangeDelta.sameChanges(this.changeList, otherDelta.changeList)
+    );
   }
 }
