@@ -5,6 +5,7 @@ import type { ProjectId } from './project-id.js';
 import type { ProjectModel } from './project-model.js';
 import type { ProjectStateId } from './project-state-id.js';
 import type { Relationship } from './relationship.js';
+import { DuplicateProjectModelIdError } from './duplicate-project-model-id-error.js';
 
 export class ProjectState {
   private static sameElements(left: readonly Element[], right: readonly Element[]): boolean {
@@ -12,10 +13,11 @@ export class ProjectState {
       return false;
     }
 
-    return left.every((element) => {
-      const other = right.find((candidate) => candidate.id === element.id);
-      return other !== undefined && other.name === element.name;
-    });
+    const rightById = new Map(right.map((element) => [element.id, element]));
+
+    return left.every(
+      (element) => rightById.get(element.id)?.name === element.name,
+    );
   }
 
   private static sameRelationships(
@@ -26,14 +28,22 @@ export class ProjectState {
       return false;
     }
 
-    return left.every((relationship) => {
-      const other = right.find((candidate) => candidate.id === relationship.id);
-      return other !== undefined && other.name === relationship.name;
-    });
+    const rightById = new Map(right.map((relationship) => [relationship.id, relationship]));
+
+    return left.every(
+      (relationship) => rightById.get(relationship.id)?.name === relationship.name,
+    );
   }
 
   static create(projectId: ProjectId, model: ProjectModel): ProjectState {
-    return new ProjectState(randomUUID(), projectId, model);
+    const elements = ProjectState.snapshotElements(model.elements);
+    const relationships = ProjectState.snapshotRelationships(model.relationships);
+
+    return new ProjectState(
+      randomUUID(),
+      projectId,
+      Object.freeze({ elements, relationships }),
+    );
   }
 
   get id(): ProjectStateId {
@@ -49,6 +59,36 @@ export class ProjectState {
     private readonly project: ProjectId,
     private readonly projectModel: ProjectModel,
   ) {}
+
+  private static snapshotElements(elements: readonly Element[]): readonly Element[] {
+    const ids = new Set<string>();
+    const snapshot = elements.map((element) => {
+      if (ids.has(element.id)) {
+        throw new DuplicateProjectModelIdError('element', element.id);
+      }
+
+      ids.add(element.id);
+      return Object.freeze({ ...element });
+    });
+
+    return Object.freeze(snapshot);
+  }
+
+  private static snapshotRelationships(
+    relationships: readonly Relationship[],
+  ): readonly Relationship[] {
+    const ids = new Set<string>();
+    const snapshot = relationships.map((relationship) => {
+      if (ids.has(relationship.id)) {
+        throw new DuplicateProjectModelIdError('relationship', relationship.id);
+      }
+
+      ids.add(relationship.id);
+      return Object.freeze({ ...relationship });
+    });
+
+    return Object.freeze(snapshot);
+  }
 
   getElements(): readonly Element[] {
     return this.projectModel.elements.map((element) => ({ ...element }));

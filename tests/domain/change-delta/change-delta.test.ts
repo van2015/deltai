@@ -4,6 +4,7 @@ import { ChangeProposal } from '@/domain/change-proposal/change-proposal.js';
 import { Change } from '@/domain/change-delta/change.js';
 import { ChangeDelta } from '@/domain/change-delta/change-delta.js';
 import { ChangeType } from '@/domain/change-delta/change-type.js';
+import { InvalidChangeApplicationError } from '@/domain/change-delta/invalid-change-application-error.js';
 import type { Element } from '@/domain/project/project-state/element.js';
 import type { Relationship } from '@/domain/project/project-state/relationship.js';
 
@@ -182,6 +183,56 @@ describe('ChangeDelta', () => {
     const reconstructedState = delta.applyTo(sourceState);
 
     expect(reconstructedState.hasSameModelAs(targetState)).toBe(true);
+  });
+
+  it('can apply a delta to an equivalent source snapshot', () => {
+    const sourceState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const equivalentSource = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'PurchaseOrder' })
+      .build();
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    const reconstructedState = delta.applyTo(equivalentSource);
+
+    expect(reconstructedState.hasSameModelAs(targetState)).toBe(true);
+  });
+
+  it('rejects applying a delta to a different project', () => {
+    const sourceState = ProjectStateBuilder.aState()
+      .withProjectId('project-a')
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const targetState = ProjectStateBuilder.aState()
+      .withProjectId('project-a')
+      .withElement({ id: 'Order', name: 'PurchaseOrder' })
+      .build();
+    const otherProjectState = ProjectStateBuilder.aState()
+      .withProjectId('project-b')
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(() => delta.applyTo(otherProjectState)).toThrow(InvalidChangeApplicationError);
+  });
+
+  it('rejects applying a delta to a different model', () => {
+    const sourceState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'Order' })
+      .build();
+    const targetState = ProjectStateBuilder.aState()
+      .withElement({ id: 'Order', name: 'PurchaseOrder' })
+      .build();
+    const differentSource = ProjectStateBuilder.aState()
+      .withElement({ id: 'Customer', name: 'Customer' })
+      .build();
+    const delta = ChangeDelta.between(sourceState, targetState);
+
+    expect(() => delta.applyTo(differentSource)).toThrow(InvalidChangeApplicationError);
   });
 
   it('contains only elements and relationships from the compared states', () => {

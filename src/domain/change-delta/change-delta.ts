@@ -4,6 +4,7 @@ import type { ChangeProposal } from '../change-proposal/change-proposal.js';
 import type { Relationship } from '../project/project-state/relationship.js';
 import { Change } from './change.js';
 import { ChangeType } from './change-type.js';
+import { InvalidChangeApplicationError } from './invalid-change-application-error.js';
 
 export class ChangeDelta {
   private static applyElementChange(elements: Element[], change: Change): void {
@@ -14,6 +15,12 @@ export class ChangeDelta {
     }
 
     if (change.type === ChangeType.Added) {
+      if (elements.some((candidate) => candidate.id === element.id)) {
+        throw new InvalidChangeApplicationError(
+          `element "${element.id}" already exists`,
+        );
+      }
+
       elements.push(element);
       return;
     }
@@ -21,7 +28,9 @@ export class ChangeDelta {
     const index = elements.findIndex((candidate) => candidate.id === element.id);
 
     if (index === -1) {
-      return;
+      throw new InvalidChangeApplicationError(
+        `element "${element.id}" does not exist`,
+      );
     }
 
     if (change.type === ChangeType.Removed) {
@@ -43,6 +52,12 @@ export class ChangeDelta {
     }
 
     if (change.type === ChangeType.Added) {
+      if (relationships.some((candidate) => candidate.id === relationship.id)) {
+        throw new InvalidChangeApplicationError(
+          `relationship "${relationship.id}" already exists`,
+        );
+      }
+
       relationships.push(relationship);
       return;
     }
@@ -50,7 +65,9 @@ export class ChangeDelta {
     const index = relationships.findIndex((candidate) => candidate.id === relationship.id);
 
     if (index === -1) {
-      return;
+      throw new InvalidChangeApplicationError(
+        `relationship "${relationship.id}" does not exist`,
+      );
     }
 
     if (change.type === ChangeType.Removed) {
@@ -169,6 +186,15 @@ export class ChangeDelta {
   ) {}
 
   applyTo(sourceState: ProjectState): ProjectState {
+    if (
+      sourceState.projectId !== this.sourceState.projectId ||
+      !sourceState.hasSameModelAs(this.sourceState)
+    ) {
+      throw new InvalidChangeApplicationError(
+        'source state does not have the same project and model as the delta source',
+      );
+    }
+
     const elements = [...sourceState.getElements()];
     const relationships = [...sourceState.getRelationships()];
 
