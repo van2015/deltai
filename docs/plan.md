@@ -13,11 +13,12 @@ La base de dominio implementada incluye:
 - `SourceCode` y `RefactoringProposal`.
 - `AgentGateway` y `LlmAgentGateway`.
 - `AnalyzeRefactorings` y `AnalyzeRefactoringsCommand`.
+- `AnalyzeProject` y `AnalyzeProjectCommand` con análisis mediante puertos y fakes.
 - `AcceptRefactoring` y `AcceptRefactoringCommand`.
 - `RefactoringEngine` y `WorkspaceWriter` como puertos.
 - Fakes para agentes, engines, repositorios y workspace.
 
-La suite actual cuenta con 117 tests, con typecheck y build limpios.
+La suite actual cuenta con 148 tests, con typecheck y build limpios.
 
 ## 2. Objetivo Arquitectónico
 
